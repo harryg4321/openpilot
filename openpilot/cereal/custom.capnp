@@ -496,7 +496,18 @@ struct ModelDataV2SP @0xa1680744031fdb2d {
   }
 }
 
-struct CustomReserved10 @0xcb9fd56c7057593a {
+# Read-only DBC signals for the vehicle menu: things the car broadcasts that openpilot has no
+# control-path use for. The set of keys is per platform (opendbc/sunnypilot/car/vehicle_info.py),
+# so values are keyed by name rather than by field, and a car with nothing declared publishes an
+# empty list. Display only -- nothing here may be fed back into control.
+struct VehicleInfoSP @0xcb9fd56c7057593a {
+  values @0 :List(Value);
+
+  struct Value {
+    key @0 :Text;      # VehicleInfoItem.key
+    value @1 :Float32; # already scaled into the item's unit
+    valid @2 :Bool;    # signal was seen recently
+  }
 }
 
 struct CustomReserved11 @0xc2243c65e0340384 {

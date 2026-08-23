@@ -11,7 +11,9 @@ from openpilot.system.ui.widgets.scroller_tici import Scroller
 
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.vehicle.brands.factory import BrandSettingsFactory
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.vehicle.platform_selector import PlatformSelector, LegendWidget
+from openpilot.selfdrive.ui.sunnypilot.lib.vehicle_info import GROUP_LABELS, VehicleInfoModel, set_active
 from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.system.ui.sunnypilot.lib.styles import style
 from openpilot.system.ui.sunnypilot.widgets.list_view import ListItemSP
 
 
@@ -22,6 +24,7 @@ class VehicleLayout(Widget):
     self._brand_items = []
     self._current_brand = None
     self._platform_selector = PlatformSelector(self._update_brand_settings)
+    self._vehicle_info = VehicleInfoModel()
 
     self._vehicle_item = ListItemSP(title=self._platform_selector.text, action_item=ButtonAction(text=tr("SELECT")),
                                     callback=self._platform_selector._on_clicked)
@@ -39,19 +42,36 @@ class VehicleLayout(Widget):
       return ui_state.CP.brand
     return ""
 
+  def _vehicle_info_items(self) -> list:
+    """Live DBC readings for this platform, one section per group. Values resolve on render, so
+    the rows only have to be rebuilt when the car itself changes.
+
+    No explicit separators: this panel's Scroller draws its own between every item, unlike the
+    steering panel, which turns them off and places LineSeparatorSP by hand."""
+    items: list = []
+    for group, group_items in self._vehicle_info.by_group.items():
+      items.append(ListItemSP(title=tr(GROUP_LABELS[group]), title_color=style.ITEM_TEXT_VALUE_COLOR))
+      for item in group_items:
+        row = ListItemSP(title=tr(item.label))
+        row.set_right_value(lambda i=item: self._vehicle_info.format(i))
+        items.append(row)
+    return items
+
   def _update_brand_settings(self):
     self._vehicle_item._title = self._platform_selector.text
     self._vehicle_item.title_color = self._platform_selector.color
     vehicle_text = tr("REMOVE") if ui_state.params.get("CarPlatformBundle") else tr("SELECT")
     self._vehicle_item.action_item.set_text(vehicle_text)
 
+    self._vehicle_info.update()
+
     brand = self.get_brand()
-    if brand != self._current_brand:
+    if brand != self._current_brand or self._vehicle_info.changed:
       self._current_brand = brand
       self._brand_settings = BrandSettingsFactory.create_brand_settings(brand)
       self._brand_items = self._brand_settings.items if self._brand_settings else []
 
-      self.items = [self._vehicle_item, self._legend_widget] + self._brand_items
+      self.items = [self._vehicle_item, self._legend_widget] + self._brand_items + self._vehicle_info_items()
       self._scroller = Scroller(self.items, line_separator=True, spacing=0)
 
   def _update_state(self):
@@ -65,3 +85,8 @@ class VehicleLayout(Widget):
 
   def show_event(self):
     self._scroller.show_event()
+    set_active(True)
+
+  def hide_event(self):
+    super().hide_event()
+    set_active(False)

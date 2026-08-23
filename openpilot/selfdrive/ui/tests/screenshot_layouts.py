@@ -238,6 +238,29 @@ def capture_steering():
   capture_picker(s._tq_friction, "steering_friction_picker.png")
 
 
+def capture_vehicle():
+  """The vehicle menu is car specific, so this stands a Mazda up with synthetic readings."""
+  from openpilot.selfdrive.ui.sunnypilot.mici.layouts.vehicle import VehicleLayoutMici
+  from openpilot.selfdrive.ui.tests.vehicle_info_stub import stub_vehicle_info
+  from openpilot.selfdrive.ui.ui_state import ui_state
+
+  # plausible mid-drive sample: warm engine, 6th gear, belted, lights on
+  DEMO = {"engineRpm": 1850, "coolantTemp": 84, "transmissionGear": 6, "gearSelector": 4,
+          "outsideTemp": 21.8, "brakePressure": 0, "seatbeltDriver": 1, "lowBeams": 1,
+          "lkasTorque": -240}
+
+  prev = (ui_state.CP, ui_state.CP_SP, ui_state.sm, ui_state.started, ui_state.is_metric)
+  try:
+    stub_vehicle_info(DEMO)
+    v = VehicleLayoutMici()
+    v.show_event()
+    capture(v, "vehicle.png")
+    for group, view in v._group_views.items():
+      capture_sub_view(view, f"vehicle_{group}.png")
+  finally:
+    ui_state.CP, ui_state.CP_SP, ui_state.sm, ui_state.started, ui_state.is_metric = prev
+
+
 def capture_trips():
   from openpilot.selfdrive.ui.sunnypilot.mici.layouts.trips import TripsLayoutMici
 
@@ -263,6 +286,7 @@ def main():
     capture_cruise()
     capture_steering()
     capture_trips()
+    capture_vehicle()
 
     gui_app.close()
     print(f"\nDone — {OUTPUT_DIR}/")

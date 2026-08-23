@@ -412,3 +412,143 @@ class TestMadsLimitedCallSignature:
       assert layout._mads_limited is False
     finally:
       ui_state.CP, ui_state.CP_SP = old_cp, old_cp_sp
+
+
+@pytest.fixture
+def restore_ui_state(params):
+  from openpilot.selfdrive.ui.ui_state import ui_state
+  saved = (ui_state.CP, ui_state.CP_SP, ui_state.sm, ui_state.started, ui_state.is_metric)
+  yield
+  ui_state.CP, ui_state.CP_SP, ui_state.sm, ui_state.started, ui_state.is_metric = saved
+
+
+class TestVehicleInfoModel:
+  """The model is the shared half of the vehicle menu. Its job is to never present a reading the
+  car did not actually send, and to convert units the same way on both device families."""
+
+  def test_unavailable_until_the_car_publishes(self, restore_ui_state):
+    from openpilot.selfdrive.ui.sunnypilot.lib.vehicle_info import UNAVAILABLE, VehicleInfoModel
+    from openpilot.selfdrive.ui.tests.vehicle_info_stub import stub_vehicle_info
+
+    items = stub_vehicle_info({})
+    model = VehicleInfoModel()
+    model.update()
+    assert model.available, "a fingerprinted Mazda declares rows"
+    assert all(model.format(i) == UNAVAILABLE for i in items), "no reading may be invented"
+
+  def test_offroad_drops_stale_readings(self, restore_ui_state):
+    from openpilot.selfdrive.ui.sunnypilot.lib.vehicle_info import UNAVAILABLE, VehicleInfoModel
+    from openpilot.selfdrive.ui.tests.vehicle_info_stub import stub_vehicle_info
+
+    items = stub_vehicle_info({"coolantTemp": 84.0})
+    coolant = next(i for i in items if i.key == "coolantTemp")
+    model = VehicleInfoModel()
+    model.update()
+    assert model.format(coolant) != UNAVAILABLE
+
+    # the car is switched off: the last value is minutes old and must not keep reading live
+    from openpilot.selfdrive.ui.ui_state import ui_state
+    ui_state.started = False
+    model.update()
+    assert model.format(coolant) == UNAVAILABLE
+    assert not model.live
+
+  def test_temperature_follows_the_unit_setting(self, restore_ui_state):
+    from openpilot.selfdrive.ui.sunnypilot.lib.vehicle_info import VehicleInfoModel
+    from openpilot.selfdrive.ui.tests.vehicle_info_stub import stub_vehicle_info
+    from openpilot.selfdrive.ui.ui_state import ui_state
+
+    items = stub_vehicle_info({"coolantTemp": 100.0}, metric=True)
+    coolant = next(i for i in items if i.key == "coolantTemp")
+    model = VehicleInfoModel()
+    model.update()
+    assert model.format(coolant).startswith("100")
+
+    ui_state.is_metric = False
+    assert model.format(coolant).startswith("212"), "100 C is 212 F"
+
+  def test_state_items_use_the_declared_labels(self, restore_ui_state):
+    """GEAR_BOX has no VAL_ table, so the labels come from the item; the selector's come from
+    the DBC. Both have to resolve or the row shows a bare number."""
+    from openpilot.selfdrive.ui.sunnypilot.lib.vehicle_info import VehicleInfoModel
+    from openpilot.selfdrive.ui.tests.vehicle_info_stub import stub_vehicle_info
+
+    items = stub_vehicle_info({"transmissionGear": 14.0, "gearSelector": 2.0})
+    model = VehicleInfoModel()
+    model.update()
+    assert model.format(next(i for i in items if i.key == "transmissionGear")) == "R"
+    assert model.format(next(i for i in items if i.key == "gearSelector")) == "R"
+
+  def test_rebuilds_when_the_car_changes(self, restore_ui_state):
+    from openpilot.selfdrive.ui.sunnypilot.lib.vehicle_info import VehicleInfoModel
+    from openpilot.selfdrive.ui.tests.vehicle_info_stub import stub_vehicle_info
+    from openpilot.selfdrive.ui.ui_state import ui_state
+
+    stub_vehicle_info({})
+    model = VehicleInfoModel()
+    model.update()
+    assert model.available
+
+    ui_state.CP = None
+    model.update()
+    assert not model.available, "rows must not survive losing the car"
+    assert model.groups == []
+
+  def test_flags_read_on_off(self, restore_ui_state):
+    from openpilot.selfdrive.ui.sunnypilot.lib.vehicle_info import VehicleInfoModel
+    from openpilot.selfdrive.ui.tests.vehicle_info_stub import stub_vehicle_info
+
+    items = stub_vehicle_info({"doorFl": 1.0, "doorFr": 0.0})
+    model = VehicleInfoModel()
+    model.update()
+    assert model.is_on(next(i for i in items if i.key == "doorFl"))
+    assert not model.is_on(next(i for i in items if i.key == "doorFr"))
+
+
+class TestVehicleLayoutMici:
+  def test_builds_a_group_per_declared_group(self, restore_ui_state):
+    from openpilot.selfdrive.ui.sunnypilot.mici.layouts.vehicle import VehicleLayoutMici
+    from openpilot.selfdrive.ui.tests.vehicle_info_stub import stub_vehicle_info
+    from opendbc.sunnypilot.car.vehicle_info_base import ItemGroup
+
+    stub_vehicle_info({"coolantTemp": 84.0})
+    layout = VehicleLayoutMici()
+    layout._update_state()
+    assert set(layout._group_buttons) == {ItemGroup.powertrain, ItemGroup.chassis,
+                                          ItemGroup.body, ItemGroup.assist}
+
+  def test_flag_only_group_summarizes_raised_flags(self, restore_ui_state):
+    """Body has no numeric rows, so its button has to say something useful about its flags."""
+    from openpilot.selfdrive.ui.sunnypilot.mici.layouts.vehicle import VehicleLayoutMici
+    from openpilot.selfdrive.ui.tests.vehicle_info_stub import stub_vehicle_info
+    from opendbc.sunnypilot.car.vehicle_info_base import ItemGroup
+
+    stub_vehicle_info({"doorFl": 1.0, "seatbeltDriver": 1.0})
+    layout = VehicleLayoutMici()
+    layout._update_state()
+    badges = layout._group_buttons[ItemGroup.body]._badge_labels or []
+    assert "door front left" in badges
+    assert "driver seatbelt" in badges
+
+  def test_placeholder_when_the_car_declares_nothing(self, restore_ui_state):
+    from openpilot.selfdrive.ui.sunnypilot.mici.layouts.vehicle import VehicleLayoutMici
+    from openpilot.selfdrive.ui.ui_state import ui_state
+
+    ui_state.CP = None
+    layout = VehicleLayoutMici()
+    layout._update_state()
+    assert not layout._group_buttons
+    assert layout._placeholder in layout._scroller._items
+
+  def test_rows_track_the_published_value(self, restore_ui_state):
+    from openpilot.selfdrive.ui.sunnypilot.mici.layouts.vehicle import VehicleLayoutMici
+    from openpilot.selfdrive.ui.tests.vehicle_info_stub import stub_vehicle_info
+    from opendbc.sunnypilot.car.vehicle_info_base import ItemGroup
+
+    stub_vehicle_info({"engineRpm": 1850.0})
+    layout = VehicleLayoutMici()
+    layout._update_state()
+    render(layout._group_views[ItemGroup.powertrain])
+    rpm_row = next(r for r in layout._group_views[ItemGroup.powertrain]._refreshable
+                   if r._item.key == "engineRpm")
+    assert rpm_row.value.startswith("1850")

@@ -187,6 +187,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ShowTurnSignals", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"StandstillTimer", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"TrueVEgoUI", {PERSISTENT | BACKUP, BOOL, "0"}},
+    // set while the vehicle menu is on screen; card only parses its DBC signals when it is
+    {"VehicleInfoActive", {CLEAR_ON_MANAGER_START, BOOL}},
 
     // MADS params
     {"Mads", {PERSISTENT | BACKUP, BOOL, "1"}},

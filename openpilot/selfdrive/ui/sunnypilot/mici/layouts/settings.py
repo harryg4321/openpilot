@@ -15,6 +15,7 @@ from openpilot.selfdrive.ui.sunnypilot.mici.layouts.models import ModelsLayoutMi
 from openpilot.selfdrive.ui.sunnypilot.mici.layouts.steering import SteeringLayoutMici
 from openpilot.selfdrive.ui.sunnypilot.mici.layouts.sunnylink import SunnylinkLayoutMici
 from openpilot.selfdrive.ui.sunnypilot.mici.layouts.trips import TripsLayoutMici
+from openpilot.selfdrive.ui.sunnypilot.mici.layouts.vehicle import VehicleLayoutMici
 from openpilot.selfdrive.ui.sunnypilot.mici.layouts.visuals import VisualsLayoutMici
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app
@@ -41,7 +42,8 @@ class SettingsLayoutSP(OP.SettingsLayout):
     panels = [
       (tr("sunnylink"), SunnylinkLayoutMici, gui_app.texture("icons_mici/settings/developer/ssh.png", 56, 64)),
       (tr("models"),    ModelsLayoutMici,    gui_app.texture(f"{SP_ICON}/icon_models.png", 64, 64)),
-      (tr("cruise"),    CruiseLayoutMici,    gui_app.texture(f"{SP_ICON}/icon_vehicle.png", 64, 64)),
+      (tr("cruise"),    CruiseLayoutMici,    gui_app.texture("icons/speed_limit.png", 64, 64)),
+      (tr("vehicle"),   VehicleLayoutMici,   gui_app.texture(f"{SP_ICON}/icon_vehicle.png", 64, 64)),
       (tr("steering"),  SteeringLayoutMici,  gui_app.texture(f"{SP_ICON}/icon_lateral.png", 64, 64)),
       (tr("display"),   DisplayLayoutMici,   gui_app.texture(f"{SP_ICON}/icon_display.png", 64, 64)),
       (tr("visuals"),   VisualsLayoutMici,   gui_app.texture(f"{SP_ICON}/icon_visuals.png", 64, 64)),

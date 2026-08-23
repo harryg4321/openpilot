@@ -3,7 +3,11 @@ import os
 import time
 import threading
 
+from dataclasses import asdict
+
 import openpilot.cereal.messaging as messaging
+
+from openpilot.cereal.services import SERVICE_LIST
 
 from openpilot.cereal import log, custom
 from opendbc.car.structs import car
@@ -18,6 +22,8 @@ from opendbc.car.carlog import carlog
 from opendbc.car.fw_versions import ObdCallback
 from opendbc.car.car_helpers import get_car, interfaces
 from opendbc.car.interfaces import CarInterfaceBase, RadarInterfaceBase
+from opendbc.sunnypilot.car.vehicle_info import get_vehicle_info
+from opendbc.sunnypilot.car.vehicle_info_base import VehicleInfo
 from openpilot.selfdrive.pandad import can_capnp_to_list, can_list_to_can_capnp
 from openpilot.selfdrive.car.cruise import VCruiseHelper
 from openpilot.selfdrive.car.helpers import convert_carControlSP, convert_to_capnp
@@ -27,6 +33,8 @@ from openpilot.sunnypilot.selfdrive.car import interfaces as sunnypilot_interfac
 from openpilot.sunnypilot.selfdrive.car.alpha_long_toggle import AlphaLongToggleMonitor
 
 REPLAY = "REPLAY" in os.environ
+
+VEHICLE_INFO_DECIMATION = int(1. / (SERVICE_LIST['vehicleInfoSP'].frequency * DT_CTRL))
 
 EventName = log.OnroadEvent.EventName
 
@@ -66,6 +74,7 @@ def can_comm_callbacks(logcan: messaging.SubSocket, sendcan: messaging.PubSocket
 class Car:
   CI: CarInterfaceBase
   RI: RadarInterfaceBase
+  VI: VehicleInfo
   CP: car.CarParams
   CP_SP: structs.CarParamsSP
   CP_SP_capnp: custom.CarParamsSP
@@ -73,7 +82,7 @@ class Car:
   def __init__(self, CI=None, RI=None) -> None:
     self.can_sock = messaging.sub_sock('can', timeout=20)
     self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents'] + ['carControlSP', 'longitudinalPlanSP'])
-    self.pm = messaging.PubMaster(['sendcan', 'carState', 'carParams', 'carOutput', 'radarTracks'] + ['carParamsSP', 'carStateSP'])
+    self.pm = messaging.PubMaster(['sendcan', 'carState', 'carParams', 'carOutput', 'radarTracks'] + ['carParamsSP', 'carStateSP', 'vehicleInfoSP'])
 
     self.can_rcv_cum_timeout_counter = 0
 
@@ -122,6 +131,13 @@ class Car:
     else:
       self.CI, self.CP, self.CP_SP = CI, CI.CP, CI.CP_SP
       self.RI = RI
+
+    # display-only DBC readings for the vehicle menu. A peer consumer of the CAN drain, like RI,
+    # deliberately outside the car interface so it can never reach carState.canValid. Parsing is
+    # a second pass over every frame, so it only runs while the menu is actually on screen; the
+    # UI sets VehicleInfoActive on show and clears it on hide.
+    self.VI = get_vehicle_info(self.CP, self.CP_SP, self.CI.can_parsers)
+    self.vehicle_info_active = False
 
     self.CP.alternativeExperience = 0
     # mads
@@ -206,6 +222,12 @@ class Car:
     # Update radar tracks from CAN
     RD: structs.RadarDataT | None = self.RI.update(can_list)
 
+    # re-read on the publish tick: a stale flag costs at most half a second of parsing
+    if self.VI.items and self.sm.frame % VEHICLE_INFO_DECIMATION == 0:
+      self.vehicle_info_active = self.params.get_bool("VehicleInfoActive")
+    if self.vehicle_info_active:
+      self.VI.update_can(can_list)
+
     self.sm.update(0)
 
     can_rcv_valid = len(can_strs) > 0
@@ -275,6 +297,13 @@ class Car:
     cs_sp_send.valid = CS.canValid
     cs_sp_send.carStateSP = CS_SP
     self.pm.send('carStateSP', cs_sp_send)
+
+    # vehicleInfoSP - display only, and only for whoever is looking at the menu
+    if self.vehicle_info_active and self.sm.frame % VEHICLE_INFO_DECIMATION == 0:
+      vi_send = messaging.new_message('vehicleInfoSP')
+      vi_send.valid = CS.canValid
+      vi_send.vehicleInfoSP.values = [asdict(v) for v in self.VI.update()]
+      self.pm.send('vehicleInfoSP', vi_send)
 
   def controls_update(self, CS: car.CarState, CC: car.CarControl, CC_SP: custom.CarControlSP):
     """control update loop, driven by carControl"""
