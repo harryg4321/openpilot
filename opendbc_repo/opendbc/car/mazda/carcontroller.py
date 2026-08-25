@@ -7,7 +7,7 @@ from opendbc.car.interfaces import CarControllerBase
 from opendbc.car.mazda import mazdacan
 from opendbc.car.mazda.longitudinal import (RADAR_ADDR, RadarSessionManager, RadarSessionState, StandstillHold,
                                             create_radar_session_msg)
-from opendbc.car.mazda.values import CarControllerParams, Buttons
+from opendbc.car.mazda.values import CAR, CarControllerParams, Buttons
 
 from opendbc.sunnypilot.car.mazda.icbm import IntelligentCruiseButtonManagementInterface
 
@@ -17,6 +17,18 @@ LongCtrlState = structs.CarControl.Actuators.LongControlState
 # Synthetic radar frames go to the car and to the camera; the panda only forwards
 # received frames between those buses, not our own transmissions.
 LONG_BUSES = (0, 2)
+
+
+def _steer_required_alert(CP, visual_alert, lkas_allowed_speed, steer_fault_temporary):
+  """Keep generic HUD alerts off the Mazda cluster only for a verified EPS swap.
+
+  The comma display still presents the original alert. A temporary steering fault remains
+  eligible for the cluster warning, and every stock/factory platform keeps upstream behavior.
+  """
+  eps_swapped_older_crossover = CP.carFingerprint in (CAR.MAZDA_CX5, CAR.MAZDA_CX9) and CP.minSteerSpeed == 0
+  if eps_swapped_older_crossover:
+    return steer_fault_temporary
+  return visual_alert == VisualAlert.steerRequired and lkas_allowed_speed
 
 
 class CarController(CarControllerBase, IntelligentCruiseButtonManagementInterface):
@@ -74,9 +86,8 @@ class CarController(CarControllerBase, IntelligentCruiseButtonManagementInterfac
     # send HUD alerts
     if self.frame % 50 == 0:
       ldw = CC.hudControl.visualAlert == VisualAlert.ldw
-      steer_required = CC.hudControl.visualAlert == VisualAlert.steerRequired
-      # TODO: find a way to silence audible warnings so we can add more hud alerts
-      steer_required = steer_required and CS.lkas_allowed_speed
+      steer_required = _steer_required_alert(self.CP, CC.hudControl.visualAlert, CS.lkas_allowed_speed,
+                                             CS.out.steerFaultTemporary)
       can_sends.append(mazdacan.create_alert_command(self.packer, CS.cam_laneinfo, ldw, steer_required))
 
     # send steering command

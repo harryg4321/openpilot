@@ -10,7 +10,7 @@ import pytest
 from opendbc.can import CANPacker, CANParser
 from opendbc.car import Bus, DT_CTRL, structs
 from opendbc.car.mazda import mazdacan
-from opendbc.car.mazda.carcontroller import CarController
+from opendbc.car.mazda.carcontroller import CarController, VisualAlert, _steer_required_alert
 from opendbc.car.mazda.longitudinal import LEAD_DEBOUNCE_FRAMES, RESUME_UNLATCH_FRAMES, StandstillHold
 from opendbc.car.mazda.interface import CarInterface
 from opendbc.car.mazda.values import CAR, CarControllerParams
@@ -74,6 +74,39 @@ class TestCarControllerParams:
     assert not hasattr(pre_2022_params, 'STEER_MAX_LOOKUP')
     assert pre_2022_params.STEER_MAX == 800
     assert pre_2022_params.STEER_DRIVER_MULTIPLIER == 1
+
+
+class TestSteerRequiredAlert:
+
+  @staticmethod
+  def CP(car_fingerprint, min_steer_speed):
+    return SimpleNamespace(carFingerprint=car_fingerprint, minSteerSpeed=min_steer_speed)
+
+  @pytest.mark.parametrize("car_fingerprint", [CAR.MAZDA_CX5, CAR.MAZDA_CX9])
+  def test_generic_cluster_alert_is_suppressed_only_for_older_crossover_with_swapped_eps(self, car_fingerprint):
+    CP = self.CP(car_fingerprint, 0.0)
+    assert not _steer_required_alert(CP, VisualAlert.steerRequired, True, False)
+
+  @pytest.mark.parametrize("car_fingerprint", [CAR.MAZDA_CX5, CAR.MAZDA_CX9])
+  def test_temporary_fault_still_reaches_cluster_on_eps_swap(self, car_fingerprint):
+    CP = self.CP(car_fingerprint, 0.0)
+    assert _steer_required_alert(CP, VisualAlert.none, True, True)
+
+  @pytest.mark.parametrize(("car_fingerprint", "min_steer_speed"), [
+    (CAR.MAZDA_CX5, 12.5),
+    (CAR.MAZDA_CX9, 12.5),
+    (CAR.MAZDA_CX5_2022, 0.0),
+    (CAR.MAZDA_CX9_2021, 0.0),
+    (CAR.MAZDA_3, 0.0),
+    (CAR.MAZDA_6, 0.0),
+  ])
+  def test_other_mazdas_keep_upstream_generic_cluster_alert(self, car_fingerprint, min_steer_speed):
+    CP = self.CP(car_fingerprint, min_steer_speed)
+    assert _steer_required_alert(CP, VisualAlert.steerRequired, True, False)
+
+  def test_upstream_speed_gate_is_unchanged(self):
+    CP = self.CP(CAR.MAZDA_CX5_2022, 0.0)
+    assert not _steer_required_alert(CP, VisualAlert.steerRequired, False, False)
 
 
 def crz_info_reference_checksum(dat):
