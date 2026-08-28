@@ -13,6 +13,8 @@ from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.hardware.hw import Paths
 from openpilot.sunnypilot.models.helpers import is_bundle_version_compatible
+from openpilot.selfdrive.modeld.helpers import usbgpu_present
+
 from openpilot.cereal import custom
 
 
@@ -147,10 +149,11 @@ class ModelFetcher:
     self._is_usbgpu: bool | None = None
     self.model_cache = ModelCache(params)
     self.model_url = self.MODEL_URL
+    self._update_model_source()
 
-  def _update_model_source(self, chestnut_present: bool) -> None:
-    """Updates what json to use based on chestnut hardware presence via deviceState"""
-    is_usbgpu = chestnut_present
+  def _update_model_source(self) -> None:
+    """Updates what json to use based on usbgpu availability"""
+    is_usbgpu = usbgpu_present()
     if is_usbgpu != self._is_usbgpu:
       self._is_usbgpu = is_usbgpu
       self.model_cache = ModelCache(self.params, suffix="_USBGPU" if is_usbgpu else "")
@@ -188,9 +191,9 @@ class ModelFetcher:
 
     return None
 
-  def get_available_bundles(self, chestnut_present: bool = False) -> list[custom.ModelManagerSP.ModelBundle]:
+  def get_available_bundles(self) -> list[custom.ModelManagerSP.ModelBundle]:
     """Gets the list of available models, with smart cache handling"""
-    self._update_model_source(chestnut_present)
+    self._update_model_source()
     cached_data, is_expired = self.model_cache.get()
 
     if cached_data and not is_expired:
@@ -207,12 +210,10 @@ class ModelFetcher:
     cloudlog.warning("Failed to fetch fresh data. Using expired cache as fallback")
     return self.model_parser.parse_models(cached_data)
 
-
 if __name__ == "__main__":
-  from openpilot.selfdrive.modeld.helpers import usbgpu_present
   params = Params()
   model_fetcher = ModelFetcher(params)
-  bundles = model_fetcher.get_available_bundles(chestnut_present=usbgpu_present())
+  bundles = model_fetcher.get_available_bundles()
   for bundle in bundles:
     for model in bundle.models:
       model_overrides = {override.key: override.value for override in bundle.overrides}

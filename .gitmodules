@@ -1,14 +1,13 @@
-# Custom Mazda EPS-swap channel: opendbc submodule served from harryg4321's fork.
-# Touch this file to force `git submodule sync` to rewrite
-# cached URLs on devices upgrading from snapshots that pointed at
-# zephleggett/opendbc-sunnypilot.git or zephleggett/opendbc.git.
+# Frozen backup of Ian-Boraks/openpilot:zoompilot at 88a8903dc2e50b342446787e48afe923cbbdc51b.
+# The behavior is Ian's known-working version; only this opendbc URL is repointed
+# to harryg4321's frozen copy so the backup remains self-contained.
 [submodule "panda"]
   path = panda
   url = https://github.com/sunnyhaibin/panda.git
 [submodule "opendbc"]
   path = opendbc_repo
   url = https://github.com/harryg4321/opendbc.git
-  branch = zoompilot-no-warning
+  branch = ian-no-warning-backup
 [submodule "msgq"]
   path = msgq_repo
   url = https://github.com/sunnypilot/msgq.git
