@@ -30,7 +30,10 @@ class CarInterface(CarInterfaceBase):
     # CX-9 2021 verified against route 00000004--97e4328f4f: same message set at the same
     # rates, CRZ_INFO checksum holds on all 54k stock frames, radar UDS at 0x764, and the
     # same FSC camera firmware (GSH7-67XK2-U) as the CX-5 2022 this was developed on.
-    ret.alphaLongitudinalAvailable = candidate in (CAR.MAZDA_CX5_2022, CAR.MAZDA_CX9_2021)
+    # Keep the verified factory platforms and additionally allow a 2017-21 CX-5 when its
+    # firmware confirms that a 2022+ steer-to-zero EPS has been swapped in.
+    ret.alphaLongitudinalAvailable = candidate in (CAR.MAZDA_CX5_2022, CAR.MAZDA_CX9_2021) or \
+      (candidate == CAR.MAZDA_CX5 and steer_to_zero)
     ret.openpilotLongitudinalControl = alpha_long and ret.alphaLongitudinalAvailable
     if ret.openpilotLongitudinalControl:
       ret.safetyConfigs[0].safetyParam |= MazdaSafetyFlags.LONG.value

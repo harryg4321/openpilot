@@ -46,9 +46,13 @@ class TestMazdaEpsSwap:
     assert CP.minSteerSpeed == 0
     assert CP.steerActuatorDelay == pytest.approx(0.14)
 
-  def test_swapped_eps_does_not_unlock_longitudinal(self):
-    # the radar and camera are not part of an EPS swap, and this car keeps its own pre-2022 pair
+  def test_swapped_eps_unlocks_longitudinal_for_cx5(self):
     CP = _params(CAR.MAZDA_CX5, _eps_fw(SWAPPED_EPS_FW), alpha_long=True)
+    assert CP.alphaLongitudinalAvailable
+    assert CP.openpilotLongitudinalControl
+
+  def test_stock_older_cx5_still_does_not_unlock_longitudinal(self):
+    CP = _params(CAR.MAZDA_CX5, _eps_fw(STOCK_CX5_EPS_FW), alpha_long=True)
     assert not CP.alphaLongitudinalAvailable
     assert not CP.openpilotLongitudinalControl
 
