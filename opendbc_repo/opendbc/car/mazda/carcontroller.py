@@ -20,15 +20,15 @@ LONG_BUSES = (0, 2)
 
 
 def _steer_required_alert(CP, visual_alert, lkas_allowed_speed, steer_fault_temporary):
-  """Keep the generic hands-on alert off the Mazda cluster for verified EPS swaps.
+  """Keep the generic hands-on alert off the Mazda cluster for configured EPS swaps.
 
   The comma display still presents the original alert. A temporary steering fault remains
-  eligible for the cluster warning. Factory 2022 CX-5s keep upstream behavior unless the
-  vehicle was identified as a pre-2022 chassis running the promoted 2022 control profile.
+  eligible for the cluster warning. The personal CX-5 is explicitly marked by its interface;
+  its no-warning behavior does not depend on an engine firmware response.
   """
   eps_swapped_older_crossover = CP.carFingerprint in (CAR.MAZDA_CX5, CAR.MAZDA_CX9) and CP.minSteerSpeed == 0
-  promoted_cx5_eps_swap = bool(getattr(CP, "flags", 0) & MazdaFlags.EPS_SWAP_CX5.value)
-  if eps_swapped_older_crossover or promoted_cx5_eps_swap:
+  configured_cx5_eps_swap = bool(getattr(CP, "flags", 0) & MazdaFlags.EPS_SWAP_CX5.value)
+  if eps_swapped_older_crossover or configured_cx5_eps_swap:
     return steer_fault_temporary
   return visual_alert == VisualAlert.steerRequired and lkas_allowed_speed
 

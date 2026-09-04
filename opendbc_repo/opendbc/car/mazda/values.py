@@ -100,8 +100,7 @@ class MazdaFlags(IntFlag):
   # Gen 1 hardware: same CAN messages and same camera
   GEN1 = 1
 
-  # Dynamic marker: a pre-2022 CX-5 chassis deliberately promoted to the 2022
-  # control profile because a verified steer-to-zero EPS is installed.
+  # Explicit personal configuration: 2021 CX-5 chassis with the owner's 2022 EPS.
   EPS_SWAP_CX5 = 2
 
 
@@ -197,24 +196,8 @@ def match_fw_to_car_fuzzy(live_fw_versions, vin, offline_fw_versions) -> set[str
         candidates.add(platform)
 
     if len(candidates) == 1:
-      candidate = next(iter(candidates))
-
-      # A pre-2022 KF VIN plus a verified 2022+ steer-to-zero EPS is the exact
-      # configuration the driver has already validated by manually selecting the
-      # 2022 CX-5. Promote the control profile as a unit instead of selectively
-      # enabling longitudinal on the older platform.
-      eps_fw = {
-        version
-        for (address, _), versions in live_fw_versions.items()
-        if address == 0x730
-        for version in versions
-      }
-      if candidate == CAR.MAZDA_CX5 and eps_fw & STEER_TO_ZERO_EPS_FW:
-        carlog.error("Fingerprinted pre-2022 CX-5 with steer-to-zero EPS as MAZDA_CX5_2022 control profile")
-        return {str(CAR.MAZDA_CX5_2022)}
-
-      carlog.error(f"Fingerprinted {candidate} by VIN")
-      return {str(candidate)}
+      carlog.error(f"Fingerprinted {next(iter(candidates))} by VIN")
+      return {str(c) for c in candidates}
 
     # a known Mazda WMI that names no platform identified an unsupported model
     # (BP, DM, KE, out-of-range years): never second-guess it with the engine.

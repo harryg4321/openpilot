@@ -1,6 +1,6 @@
 import pytest
 
-from opendbc.car import structs
+from opendbc.car import STD_CARGO_KG, structs
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.mazda.interface import CarInterface
 from opendbc.car.mazda.values import CAR, LKAS_LIMITS, STEER_TO_ZERO_EPS_FW
@@ -35,7 +35,8 @@ class TestMazdaEpsSwap:
   """
 
   def test_stock_older_mazda_is_dashcam_only(self):
-    CP = _params(CAR.MAZDA_CX5, _eps_fw(STOCK_CX5_EPS_FW))
+    # CX-5 is an explicit personal configuration on this branch; use an unchanged model.
+    CP = _params(CAR.MAZDA_6, _eps_fw(STOCK_CX5_EPS_FW))
     assert CP.dashcamOnly
     assert CP.minSteerSpeed == pytest.approx(LKAS_LIMITS.DISABLE_SPEED * CV.KPH_TO_MS)
     assert CP.steerActuatorDelay == pytest.approx(0.1)
@@ -46,24 +47,21 @@ class TestMazdaEpsSwap:
     assert CP.minSteerSpeed == 0
     assert CP.steerActuatorDelay == pytest.approx(0.14)
 
-  def test_swapped_eps_unlocks_longitudinal_for_cx5(self):
-    CP = _params(CAR.MAZDA_CX5, _eps_fw(SWAPPED_EPS_FW), alpha_long=True)
-    assert CP.alphaLongitudinalAvailable
-    assert CP.openpilotLongitudinalControl
-
-  def test_stock_older_cx5_still_does_not_unlock_longitudinal(self):
-    CP = _params(CAR.MAZDA_CX5, _eps_fw(STOCK_CX5_EPS_FW), alpha_long=True)
+  def test_swapped_eps_does_not_unlock_longitudinal(self):
+    # Only the owner's CX-5 gets the personal Alpha override, not other Mazda swaps.
+    CP = _params(CAR.MAZDA_6, _eps_fw(SWAPPED_EPS_FW), alpha_long=True)
     assert not CP.alphaLongitudinalAvailable
     assert not CP.openpilotLongitudinalControl
 
   def test_swapped_eps_keeps_the_real_vehicle_specs(self):
-    # the whole point of fixing detection is that the user no longer forces MAZDA_CX5_2022 and
-    # inherits its mass, steer ratio and tire stiffness
+    # The personal configuration must keep the real 2021 chassis parameters.
     swapped = _params(CAR.MAZDA_CX5, _eps_fw(SWAPPED_EPS_FW))
-    cx5_2022 = _params(CAR.MAZDA_CX5_2022)
-    assert swapped.mass != cx5_2022.mass
-    assert swapped.steerRatio != cx5_2022.steerRatio
-    assert swapped.tireStiffnessFactor != cx5_2022.tireStiffnessFactor
+    specs = CAR.MAZDA_CX5.config.specs
+    assert swapped.carFingerprint == CAR.MAZDA_CX5
+    assert swapped.mass == pytest.approx(specs.mass + STD_CARGO_KG)
+    assert swapped.wheelbase == pytest.approx(specs.wheelbase)
+    assert swapped.steerRatio == pytest.approx(specs.steerRatio)
+    assert swapped.tireStiffnessFactor == pytest.approx(specs.tireStiffnessFactor)
 
   def test_supported_platforms_are_unchanged(self):
     cx5_2022 = _params(CAR.MAZDA_CX5_2022)
@@ -80,7 +78,7 @@ class TestMazdaEpsSwap:
 
   def test_docs_are_generated_without_firmware(self):
     # car_fw is empty when building CARS.md, so the docs must keep advertising dashcam mode
-    for candidate in (CAR.MAZDA_CX5, CAR.MAZDA_CX9, CAR.MAZDA_3, CAR.MAZDA_6):
+    for candidate in (CAR.MAZDA_CX9, CAR.MAZDA_3, CAR.MAZDA_6):
       CP = CarInterface.get_params(candidate, {0: {}, 1: {}, 2: {}}, [], False,
                                    is_release=False, docs=True)
       assert CP.dashcamOnly, candidate

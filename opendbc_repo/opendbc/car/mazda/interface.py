@@ -6,7 +6,6 @@ from opendbc.car.mazda.carcontroller import CarController
 from opendbc.car.mazda.carstate import CarState
 from opendbc.car.mazda.radar_interface import RadarInterface
 from opendbc.car.mazda.values import CAR, DBC, Ecu, LKAS_LIMITS, STEER_TO_ZERO_EPS_FW, MazdaFlags, MazdaSafetyFlags
-from opendbc.car.mazda.fingerprints import FW_VERSIONS
 
 
 class CarInterface(CarInterfaceBase):
@@ -21,27 +20,23 @@ class CarInterface(CarInterfaceBase):
 
     ret.radarUnavailable = Bus.radar not in DBC[candidate]
 
-    # 2022+ CX-5 EPS can steer to zero and has no hands-off lockout. Detected by EPS firmware
-    # rather than by model, so an EPS swapped into an older Mazda is recognized as what it is.
-    steer_to_zero = candidate == CAR.MAZDA_CX5_2022 or \
+    # PRIVATE BRANCH: the owner's 2021 CX-5 has a confirmed 2022 EPS swap.
+    # This configuration is explicit, not inferred from ECU query success.
+    # This branch must not be used on a CX-5 with its original pre-2022 EPS.
+    personal_cx5_eps_swap = candidate == CAR.MAZDA_CX5
+    if personal_cx5_eps_swap:
+      ret.flags |= MazdaFlags.EPS_SWAP_CX5.value
+
+    # Other Mazda EPS swaps keep their existing firmware-derived steering behavior.
+    steer_to_zero = personal_cx5_eps_swap or candidate == CAR.MAZDA_CX5_2022 or \
       any(fw.ecu == Ecu.eps and fw.fwVersion in STEER_TO_ZERO_EPS_FW for fw in car_fw)
     if not steer_to_zero:
       ret.minSteerSpeed = LKAS_LIMITS.DISABLE_SPEED * CV.KPH_TO_MS
 
-    # When a pre-2022 CX-5 is manually forced to the 2022 profile, or was promoted there by
-    # the VIN+EPS matcher, remember that it is still the older chassis. The engine firmware
-    # is platform-unique in the recorded database; treating an unrecognized engine as a swap
-    # is intentional on this custom profile so dealer-updated 2017-21 cars keep no-warning.
-    if candidate == CAR.MAZDA_CX5_2022:
-      factory_2022_engine_fw = set(FW_VERSIONS[CAR.MAZDA_CX5_2022].get((Ecu.engine, 0x7e0, None), []))
-      engine_fw = [fw.fwVersion for fw in car_fw if fw.ecu == Ecu.engine]
-      if engine_fw and not any(version in factory_2022_engine_fw for version in engine_fw):
-        ret.flags |= MazdaFlags.EPS_SWAP_CX5.value
-
     # CX-9 2021 verified against route 00000004--97e4328f4f: same message set at the same
     # rates, CRZ_INFO checksum holds on all 54k stock frames, radar UDS at 0x764, and the
     # same FSC camera firmware (GSH7-67XK2-U) as the CX-5 2022 this was developed on.
-    ret.alphaLongitudinalAvailable = candidate in (CAR.MAZDA_CX5_2022, CAR.MAZDA_CX9_2021)
+    ret.alphaLongitudinalAvailable = personal_cx5_eps_swap or candidate in (CAR.MAZDA_CX5_2022, CAR.MAZDA_CX9_2021)
     ret.openpilotLongitudinalControl = alpha_long and ret.alphaLongitudinalAvailable
     if ret.openpilotLongitudinalControl:
       ret.safetyConfigs[0].safetyParam |= MazdaSafetyFlags.LONG.value
@@ -54,9 +49,8 @@ class CarInterface(CarInterfaceBase):
 
     # Older Mazdas are dashcam only for one reason: their EPS locks steering out after ~5 s of
     # hands-off and below 45 kph. That is a property of the EPS, not of the car, so a car with
-    # the 2022+ EPS swapped in is controllable and lifts with it. A direct old-model candidate
-    # still keeps longitudinal model-gated here; the matcher promotes the validated CX-5 swap
-    # to MAZDA_CX5_2022 before parameter generation.
+    # the 2022+ EPS swapped in is controllable and lifts with it. The personal CX-5 keeps
+    # its actual chassis identity; it no longer relies on the VIN fallback promoting it.
     ret.dashcamOnly = candidate not in (CAR.MAZDA_CX5_2022, CAR.MAZDA_CX9_2021) and not steer_to_zero
 
     ret.enableBsm = 0x477 in fingerprint[0]
