@@ -29,11 +29,13 @@ class CarInterface(CarInterfaceBase):
       ret.minSteerSpeed = LKAS_LIMITS.DISABLE_SPEED * CV.KPH_TO_MS
 
     # When a pre-2022 CX-5 is manually forced to the 2022 profile, or was promoted there by
-    # the VIN+EPS matcher, remember that it is still the older chassis. Engine firmware is a
-    # reliable discriminator here: the Mazda VIN tests assert it is unique per platform.
+    # the VIN+EPS matcher, remember that it is still the older chassis. The engine firmware
+    # is platform-unique in the recorded database; treating an unrecognized engine as a swap
+    # is intentional on this custom profile so dealer-updated 2017-21 cars keep no-warning.
     if candidate == CAR.MAZDA_CX5_2022:
-      old_cx5_engine_fw = set(FW_VERSIONS[CAR.MAZDA_CX5].get((Ecu.engine, 0x7e0, None), []))
-      if any(fw.ecu == Ecu.engine and fw.fwVersion in old_cx5_engine_fw for fw in car_fw):
+      factory_2022_engine_fw = set(FW_VERSIONS[CAR.MAZDA_CX5_2022].get((Ecu.engine, 0x7e0, None), []))
+      engine_fw = [fw.fwVersion for fw in car_fw if fw.ecu == Ecu.engine]
+      if engine_fw and not any(version in factory_2022_engine_fw for version in engine_fw):
         ret.flags |= MazdaFlags.EPS_SWAP_CX5.value
 
     # CX-9 2021 verified against route 00000004--97e4328f4f: same message set at the same
