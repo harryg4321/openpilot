@@ -725,6 +725,7 @@ struct ChestnutState {
   pcieLtssm @7 :UInt8;
   supplyVoltage @8 :UInt16;  # mV
   supplyCurrent @9 :Int16;  # mA
+  supplyFault @10 :Bool;
 }
 
 struct RadarState @0x9a185389d6fdd05f {
@@ -1004,6 +1005,7 @@ struct DrivingModelData {
   frameIdExtra @1 :UInt32;
   frameDropPerc @6 :Float32;
   modelExecutionTime @7 :Float32;
+  big @8 :Bool;
 
   action @2 :ModelDataV2.Action;
 
@@ -2322,13 +2324,6 @@ struct LateralTorqueParameters @0xe61690eb0b091692 {
   version @11 :Int32;
   useParams @12 :Bool;
   calPerc @13 :Int8;
-
-  # Speed-dependent parameters
-  speedBinCenters @14 :List(Float32);
-  speedBinLatAccelFactors @15 :List(Float32);
-  speedBinFrictions @16 :List(Float32);
-  speedBinValid @17 :List(Bool);
-  speedBinPoints @18 :List(List(List(Float32)));  # per-bin point buckets for cache
 }
 
 struct LateralDelay @0x98dfdb22c44df8d4 {

@@ -1,7 +1,5 @@
-# Custom Mazda EPS-swap channel: opendbc submodule served from harryg4321's fork.
-# Touch this file to force `git submodule sync` to rewrite
-# cached URLs on devices upgrading from snapshots that pointed at
-# zephleggett/opendbc-sunnypilot.git or zephleggett/opendbc.git.
+# Use the personal no-warning opendbc fork. Changes to this file make submodule sync refresh
+# legacy URLs.
 [submodule "panda"]
   path = panda
   url = https://github.com/sunnyhaibin/panda.git

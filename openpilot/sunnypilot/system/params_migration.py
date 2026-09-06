@@ -6,9 +6,7 @@ See the LICENSE.md file in the root directory for more details.
 """
 import json
 
-from openpilot.common.basedir import BASEDIR
 from openpilot.common.swaglog import cloudlog
-from openpilot.common.utils import run_cmd, run_cmd_default
 from openpilot.sunnypilot.selfdrive.car.sync_sunnylink_params import CAR_LIST_JSON_OUT
 
 ONROAD_BRIGHTNESS_MIGRATION_VERSION: str = "1.0"
@@ -17,14 +15,6 @@ ONROAD_BRIGHTNESS_TIMER_MIGRATION_VERSION: str = "1.0"
 # index → seconds mapping for OnroadScreenOffTimer (SSoT)
 ONROAD_BRIGHTNESS_TIMER_VALUES = {0: 3, 1: 5, 2: 7, 3: 10, 4: 15, 5: 30, **{i: (i - 5) * 60 for i in range(6, 16)}}
 VALID_TIMER_VALUES = set(ONROAD_BRIGHTNESS_TIMER_VALUES.values())
-
-ZOOMPILOT_ORIGIN: str = "https://github.com/zoompilot/zoompilot.git"
-ZOOMPILOT_BRANCH: str = "main"
-
-# origins we shipped installs from before the zoompilot org existed
-LEGACY_ORIGINS: tuple[str, ...] = ("github.com/zephleggett/openpilot",)
-# only branches we published; anything else on those forks is someone else's work
-LEGACY_BRANCHES: tuple[str, ...] = ("mazda-dev", "zoompilot")
 
 
 def _resolve_brand(_params) -> str:
@@ -77,39 +67,6 @@ def _migrate_car_platform_bundle(_params):
   cloudlog.info(f"params_migration: CarPlatformBundle migrated {old_platform!r} -> {new_platform!r}")
 
 
-def _normalize_origin(url: str) -> str:
-  return url.replace("git@", "", 1).replace(".git", "", 1).replace("https://", "", 1).replace(":", "/", 1)
-
-
-def _migrate_zoompilot_channel(_params):
-  """Move devices installed from a personal fork onto zoompilot/zoompilot:main.
-
-  updated.py only ever runs `git fetch origin <branch>` and has no way to repoint a
-  remote, so the origin URL is rewritten here. Submodules need no handling: every
-  fetch runs `git submodule sync`, which follows the .gitmodules change on the target
-  branch over to zoompilot/opendbc on its own.
-  """
-  origin = run_cmd_default(["git", "config", "--get", "remote.origin.url"], cwd=BASEDIR)
-  branch = run_cmd_default(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=BASEDIR)
-  if not origin or branch not in LEGACY_BRANCHES:
-    return
-
-  if _normalize_origin(origin) in LEGACY_ORIGINS:
-    # Writing .git costs one skipped update activation: launch_chffrplus.sh treats a
-    # .git newer than .overlay_init as the user switching forks. updated.py rebuilds
-    # the overlay and re-touches the canary, so the next boot installs. Only pay that
-    # once, by rewriting solely when the URL is still wrong.
-    run_cmd(["git", "remote", "set-url", "origin", ZOOMPILOT_ORIGIN], cwd=BASEDIR)
-    cloudlog.info(f"params_migration: origin {origin!r} -> {ZOOMPILOT_ORIGIN!r}")
-
-  # UpdaterTargetBranch is CLEAR_ON_MANAGER_START and is wiped just before this runs,
-  # so it cannot carry the migration across boots. Re-assert it every boot until the
-  # checkout actually lands on ZOOMPILOT_BRANCH, at which point branch leaves
-  # LEGACY_BRANCHES and this whole migration goes quiet.
-  _params.put("UpdaterTargetBranch", ZOOMPILOT_BRANCH, block=True)
-  cloudlog.info(f"params_migration: UpdaterTargetBranch set to {ZOOMPILOT_BRANCH!r} (on {branch!r})")
-
-
 def _migrate_tesla_mads_screen_button(_params):
   # TeslaMadsScreenButton defaults to Off for fresh installs, but the screen button was previously always
   # active on Teslas with a vehicle bus. Seed existing Tesla installs with 3-finger to preserve that.
@@ -125,6 +82,25 @@ def _migrate_tesla_mads_screen_button(_params):
     cloudlog.info("params_migration: seeded TeslaMadsScreenButton with 3-finger to preserve existing behavior")
   except Exception as e:
     cloudlog.exception(f"Error migrating TeslaMadsScreenButton: {e}")
+
+
+def _migrate_model_bundle_slots(_params):
+  # Pre-split, a chestnut user's big-model selection lived in the single
+  # ActiveBundle. Seed both slots; validation drops whichever does not match
+  # its own manifest.
+  try:
+    if _params.get("ModelManager_ActiveBundleChestnut") is not None:
+      return
+    if (chestnut_bundle := _params.get("ModelManager_ActiveBundleUSBGPU")) is not None:
+      _params.put("ModelManager_ActiveBundleChestnut", chestnut_bundle, block=True)
+      cloudlog.info("params_migration: seeded ModelManager_ActiveBundleChestnut from ModelManager_ActiveBundleUSBGPU")
+      return
+    if (bundle := _params.get("ModelManager_ActiveBundle")) is None:
+      return
+    _params.put("ModelManager_ActiveBundleChestnut", bundle, block=True)
+    cloudlog.info("params_migration: seeded ModelManager_ActiveBundleChestnut from ModelManager_ActiveBundle")
+  except Exception as e:
+    cloudlog.exception(f"Error migrating model bundle slots: {e}")
 
 
 def run_migration(_params):
@@ -164,7 +140,5 @@ def run_migration(_params):
   # seed TeslaMadsScreenButton for existing Tesla installs
   _migrate_tesla_mads_screen_button(_params)
 
-  try:
-    _migrate_zoompilot_channel(_params)
-  except Exception as e:
-    cloudlog.exception(f"Error migrating to the zoompilot channel: {e}")
+  # seed the chestnut model slot from the pre-split single slot
+  _migrate_model_bundle_slots(_params)

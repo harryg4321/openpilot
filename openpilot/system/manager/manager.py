@@ -6,11 +6,10 @@ import sys
 import time
 import traceback
 
-from openpilot.cereal import log
 import openpilot.cereal.messaging as messaging
 import openpilot.system.sentry as sentry
 from openpilot.common.utils import atomic_write
-from openpilot.common.ignition import get_ignition_state
+from openpilot.sunnypilot.common.ignition import get_ignition_state
 from openpilot.common.params import Params, ParamKeyFlag
 from openpilot.common.text_window import TextWindow
 from openpilot.common.hardware import HARDWARE, PC
@@ -22,6 +21,7 @@ from openpilot.common.swaglog import cloudlog, add_file_handler
 from openpilot.common.version import get_build_metadata
 from openpilot.common.hardware.hw import Paths
 
+from openpilot.sunnypilot.selfdrive.car.interfaces import seed_car_defaults_offroad
 from openpilot.sunnypilot.system.params_migration import run_migration
 
 
@@ -53,6 +53,7 @@ def manager_init() -> None:
 
   if not PC:
     run_migration(params)
+    seed_car_defaults_offroad(params)
 
   # set unset params to their default value
   for k in params.all_keys():

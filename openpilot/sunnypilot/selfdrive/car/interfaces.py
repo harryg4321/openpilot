@@ -8,6 +8,7 @@ from typing import Any
 
 from opendbc.car import structs
 from opendbc.car.interfaces import CarInterfaceBase
+from opendbc.car.mazda.values import MazdaFlags
 from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
 from openpilot.sunnypilot.selfdrive.controls.lib.nnlc.helpers import get_nn_model_path
@@ -25,19 +26,29 @@ def log_fingerprint(CP: structs.CarParams) -> None:
     sentry.capture_fingerprint(CP.carFingerprint, CP.brand)
 
 
-def _seed_mazda_torque_defaults(CP: structs.CarParams, params: Params | None = None) -> None:
-  """One-time: default the full torque-control stack ON for steer-to-zero Mazdas (2022+ CX-5 EPS).
+MAZDA_STEER_TO_ZERO_TORQUE_TUNE = 2.0  # FLOAT param; the tune fitted to the 2022+ EPS (latcontrol_torque_v2.py)
 
-  Gated on the EPS, not the model: minSteerSpeed == 0 is the same "CX-5 2022+ EPS present" proxy
-  used by the steering tune (values.py) and carstate, so the CX-9 sharing this EPS and EPS swaps
-  are covered. Seeded once via a marker param so the user can still toggle any of these off later.
-  TorqueControlTune defaults to 0.0 (== torque learner v0), so it needs no seeding here.
+
+def _seed_mazda_torque_defaults(CP: structs.CarParams, params: Params | None = None) -> None:
+  """One-time: default the torque-control stack ON for steer-to-zero Mazdas (the 2022+ CX-5 EPS).
+
+  Gated on the EPS flag, not the model, so the CX-9 sharing this EPS and EPS swaps are covered.
+  Both seeds sit behind markers, because manager_init materializes every declared default at
+  boot: TorqueControlTune is already 0.0 on disk by the time card runs, so "unset" never
+  survives to here. The three toggles are seeded once behind MazdaTorqueDefaultsApplied. The
+  tune is seeded once per value of MAZDA_STEER_TO_ZERO_TORQUE_TUNE, recorded in
+  MazdaTorqueTuneSeeded, so a later bump moves everyone again while a choice made after the
+  seed is kept. TorqueControlTune's declared default stays 0.0 for every other brand.
   """
   if params is None:
     params = Params()
 
-  if CP.brand != "mazda" or CP.minSteerSpeed > 0:
+  if CP.brand != "mazda" or not (CP.flags & MazdaFlags.STEER_TO_ZERO_EPS):
     return
+  if params.get("MazdaTorqueTuneSeeded") != MAZDA_STEER_TO_ZERO_TORQUE_TUNE:
+    params.put("TorqueControlTune", MAZDA_STEER_TO_ZERO_TORQUE_TUNE, block=True)  # controlsd reads it at startup
+    params.put("MazdaTorqueTuneSeeded", MAZDA_STEER_TO_ZERO_TORQUE_TUNE, block=True)
+    cloudlog.warning("Seeded steer-to-zero Mazda TorqueControlTune=%s", MAZDA_STEER_TO_ZERO_TORQUE_TUNE)
   if params.get_bool("MazdaTorqueDefaultsApplied"):
     return
 
@@ -47,6 +58,22 @@ def _seed_mazda_torque_defaults(CP: structs.CarParams, params: Params | None = N
   params.put_bool("MazdaTorqueDefaultsApplied", True)
   cloudlog.warning("Seeded steer-to-zero Mazda torque-control defaults (EnforceTorqueControl, self-tune, speed-dependent)")
 
+
+def seed_car_defaults_offroad(params: Params) -> None:
+  """manager_init hook: apply the per-car seeds from the last drive's CarParams, so a device
+  that updated offroad shows and runs the seeded defaults without waiting for card to
+  fingerprint. A device that has never driven is seeded by card on its first drive."""
+  CP_bytes = params.get("CarParamsPersistent")
+  if CP_bytes is None:
+    return
+  try:
+    from openpilot.cereal import messaging  # lazy: keep manager_init's import cost down
+    from opendbc.car.structs import car
+    CP = messaging.log_from_bytes(CP_bytes, car.CarParams)
+  except Exception:
+    cloudlog.exception("seed_car_defaults_offroad: could not parse CarParamsPersistent")
+    return
+  _seed_mazda_torque_defaults(CP, params)
 
 def _enforce_torque_lateral_control(CP: structs.CarParams, params: Params | None = None, enabled: bool = False) -> bool:
   if params is None:
@@ -142,6 +169,11 @@ def initialize_params(params) -> list[dict[str, Any]]:
   # hyundai
   keys.extend([
     "HyundaiLongitudinalTuning",
+  ])
+
+  # mazda
+  keys.extend([
+    "MazdaTjaButton",
   ])
 
   # subaru

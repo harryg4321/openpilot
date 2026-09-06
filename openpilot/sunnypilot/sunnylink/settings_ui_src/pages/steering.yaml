@@ -231,13 +231,8 @@ sections:
       widget: multiple_button
       title: Torque Control Tune Version
       description: Select the version of Torque Control Tune to use.
-      options:
-      - value: ''
-        label: Default
-      - value: 1.0
-        label: v1.0
-      - value: 0.0
-        label: v0.0
+      # options come from latcontrol_torque_versions.json via generate_settings_schema's
+      # _inject_dynamic_options; a static list here would be dead data that drifts
       enablement:
       - $ref: '#/macros/offroad'
 - id: lane_change
@@ -270,6 +265,24 @@ sections:
     widget: toggle
     title: 'Block Lane Change: Road Edge Detection'
     description: Blocks lane change when the model sees a road edge on the side you signal.
+  - key: LaneChangeSmoothing
+    widget: option
+    title: Lane Change Smoothing
+    description: Slow automatic lane changes to a chosen pace. Off is stock; every pace is gentler than stock. The
+      end-of-maneuver correction keeps its authority at every pace, so the car settles into the new lane without a
+      wheel snap.
+    # values are the index into lane_change_smoothing.LEVELS, off first
+    options:
+    - value: 0
+      label: 'Off'
+    - value: 1
+      label: Fast
+    - value: 2
+      label: Medium
+    - value: 3
+      label: Slow
+    - value: 4
+      label: Extra Slow
   - key: AutoLaneChangeBsmDelay
     widget: toggle
     title: 'Auto Lane Change: Delay with Blind Spot'
