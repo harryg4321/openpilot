@@ -10,8 +10,8 @@ from openpilot.cereal import messaging, log, custom
 from opendbc.car.structs import car
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.display import OnroadBrightness
+from openpilot.sunnypilot.models.helpers import ACTIVE_BUNDLE_KEYS, get_active_source
 from openpilot.sunnypilot.sunnylink.sunnylink_state import SunnylinkState
-from openpilot.sunnypilot.selfdrive.ui.offroad_mode import request_offroad_mode
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.sunnypilot.widgets.screen_saver import ScreenSaverSP
 
@@ -44,6 +44,7 @@ class UIStateSP:
     self.screensaver_enabled: bool = False
 
     self.active_bundle = None
+    self.model_runner_tinygrad: bool = False
     self.blindspot: bool = False
     self.chevron_metrics = None
     self.custom_interactive_timeout: int = 0
@@ -151,7 +152,13 @@ class UIStateSP:
       self.has_icbm = self.CP_SP.intelligentCruiseButtonManagementAvailable and self.params.get_bool("IntelligentCruiseButtonManagement")
 
     self._enforce_constraints()
-    self.active_bundle = self.params.get("ModelManager_ActiveBundle")
+    source = get_active_source(chestnut=self.chestnut_present, chestnut_active=self.chestnut_active,
+                               chestnut_loading=self.chestnut_loading, offroad=self.is_offroad())
+    self.active_bundle = self.params.get(ACTIVE_BUNDLE_KEYS[source])
+    self.model_runner_tinygrad = self.active_bundle is not None and self.active_bundle.get("runner") == "tinygrad"
+    # stock only counts the default big model's compiled pkl. a downloaded big bundle runs on the
+    # chestnut just the same, so ChestnutState has to see it as available too.
+    self.chestnut_compiled = self.chestnut_compiled or self.model_runner_tinygrad
     self.blindspot = self.params.get_bool("BlindSpot")
     self.chevron_metrics = self.params.get("ChevronInfo")
     self.custom_interactive_timeout = self.params.get("InteractivityTimeout", return_default=True)
@@ -208,10 +215,8 @@ class UIStateSP:
       if not CP.enableBsm:
         self.params.remove("AutoLaneChangeBsmDelay")
     else:
-      # No CarParams: clear all car-dependent params as safety default. Never while
-      # onroad: on a fresh install's first drive, card seeds car-dependent defaults
-      # (e.g. the Mazda torque-control stack) during init, before CarParamsPersistent
-      # is written, and this wipe would race it and silently undo the seed.
+      # Clear car-dependent params only offroad. During first-drive initialization, card may
+      # seed defaults before CarParamsPersistent is available.
       if not self.started:
         self.params.remove("EnforceTorqueControl")
         self.params.remove("NeuralNetworkLateralControl")
@@ -261,7 +266,7 @@ class DeviceSP:
 
     # blocked runs every frame, so write only when actually sleeping
     if _ui_state.boot_offroad_mode == 1 and not on and not self._blocked_by_screensaver:
-      request_offroad_mode(_ui_state.params, True)
+      _ui_state.params.put_bool("OffroadMode", True)
 
   def dismiss_screensaver(self, _ui_state) -> None:
     if gui_app.get_active_widget() == _ui_state.screensaver:

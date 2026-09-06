@@ -22,6 +22,7 @@ from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N
 from openpilot.selfdrive.modeld.constants import ModelConstants
 from openpilot.sunnypilot import PARAMS_UPDATE_PERIOD
 from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP
+from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.limits import A_PUB_MIN, get_planning_limits, publish_ramp
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit import ACTIVE_STATES, ENABLED_STATES, \
   PCM_LONG_REQUIRED_MAX_SET_SPEED, CONFIRM_SPEED_THRESHOLD, V_CRUISE_UNSET
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.common import Mode
@@ -52,6 +53,7 @@ class SpeedLimitAssist:
     self.params = Params()
     self.CP = CP
     self.CP_SP = CP_SP
+    self.limits = get_planning_limits(CP)
     self.frame = -1
     self.long_engaged_timer = 0
     self.pre_active_timer = 0
@@ -64,6 +66,7 @@ class SpeedLimitAssist:
     self.is_active = False
     self.output_v_target = V_CRUISE_UNSET
     self.output_a_target = 0.
+    self._a_out = 0.
     self.v_ego = 0.
     self.a_ego = 0.
     self.v_offset = 0.
@@ -84,7 +87,6 @@ class SpeedLimitAssist:
     self._state_prev = SpeedLimitAssistState.disabled
     self.pcm_op_long = CP.openpilotLongitudinalControl and CP.pcmCruise
 
-    # TODO-SP: SLA's own output_a_target for planner
     # Solution functions mapped to respective states
     self.acceleration_solutions = {
       SpeedLimitAssistState.disabled: self.get_current_acceleration_as_target,
@@ -124,9 +126,19 @@ class SpeedLimitAssist:
     # Fallback
     return V_CRUISE_UNSET
 
-  # TODO-SP: SLA's own output_a_target for planner
   def get_a_target_from_control(self) -> float:
-    return self.a_ego
+    # active states publish through the shared ramp (the plan aTarget seeds the MPC, so a
+    # state change must never step it); idle states track a_ego, the ramp's starting point
+    a_des = float(min(max(self.acceleration_solutions[self.state](), A_PUB_MIN), -A_PUB_MIN))
+    if self.state in ACTIVE_STATES:
+      self._a_out = publish_ramp(a_des, self._a_out, self.limits, self.v_ego)
+    else:
+      self._a_out = a_des
+    return self._a_out
+
+  def update_buttons(self, release_toggle: int) -> None:
+    # upstream's plannerd hook: press handling lives in the card-side cruise arbiter
+    pass
 
   def update_params(self) -> None:
     if self.frame % int(PARAMS_UPDATE_PERIOD / DT_MDL) == 0:
@@ -249,8 +261,7 @@ class SpeedLimitAssist:
     if self.state == SpeedLimitAssistState.preActive:
       events_sp.add(EventNameSP.speedLimitPreActive)
 
-    # pending fires no alert: it is a waiting state (engaged, no limit known yet), and
-    # announcing "auto adjusting" on every engage reads as SLA acting when it is not
+    # pending fires no alert: announcing "auto adjusting" on every engage reads as SLA acting
 
     if self.is_active:
       if self._state_prev not in ACTIVE_STATES:

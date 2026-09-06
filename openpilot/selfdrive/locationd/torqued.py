@@ -251,7 +251,7 @@ class TorqueEstimator(ParameterEstimator, TorqueEstimatorExt):
     lateralTorqueParameters.calPerc = self.filtered_points.get_valid_percent()
     lateralTorqueParameters.decay = self.decay
     lateralTorqueParameters.maxResets = self.resets
-    self._extend_msg(lateralTorqueParameters, with_points)
+    self._extend_msg(msg, with_points)
     return msg
 
 

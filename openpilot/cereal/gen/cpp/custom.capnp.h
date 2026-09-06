@@ -95,6 +95,7 @@ enum class DownloadStatus_da834d53e62048b9: uint16_t {
   DOWNLOADED,
   CACHED,
   FAILED,
+  VERIFYING,
 };
 CAPNP_DECLARE_ENUM(DownloadStatus, da834d53e62048b9);
 CAPNP_DECLARE_SCHEMA(a677b25114d64c73);
@@ -208,12 +209,15 @@ enum class EventName_b8007ed8a646b5e6: uint16_t {
   SPEED_LIMIT_PENDING,
   E2E_CHIME,
   LANE_CHANGE_ROAD_EDGE,
+  BIG_MODEL_READY,
+  CONTROLS_MISMATCH_LATERAL_WARNING,
 };
 CAPNP_DECLARE_ENUM(EventName, b8007ed8a646b5e6);
 CAPNP_DECLARE_SCHEMA(80ae746ee2596b11);
 CAPNP_DECLARE_SCHEMA(dafc8108312924ef);
 CAPNP_DECLARE_SCHEMA(817ed0dfcd0ed40f);
 CAPNP_DECLARE_SCHEMA(a5cd762cd951a455);
+CAPNP_DECLARE_SCHEMA(a0bdba5e21501f8a);
 CAPNP_DECLARE_SCHEMA(e20e376316fa68c4);
 CAPNP_DECLARE_SCHEMA(ea24c774913a9952);
 enum class ParamType_ea24c774913a9952: uint16_t {
@@ -239,17 +243,6 @@ CAPNP_DECLARE_SCHEMA(d32ef1b9d6e3cdf5);
 CAPNP_DECLARE_SCHEMA(d8f4f047edce3c71);
 CAPNP_DECLARE_SCHEMA(9e62278160b7df26);
 CAPNP_DECLARE_SCHEMA(b86e6369214c01c8);
-CAPNP_DECLARE_SCHEMA(8a8ccab429a24d9f);
-CAPNP_DECLARE_SCHEMA(cfaed8415fc4f2e1);
-enum class CruiseIntent_cfaed8415fc4f2e1: uint16_t {
-  NONE,
-  INCREMENT,
-  DECREMENT,
-  CONFIRM,
-  DECLINE,
-  DISMISS,
-};
-CAPNP_DECLARE_ENUM(CruiseIntent, cfaed8415fc4f2e1);
 CAPNP_DECLARE_SCHEMA(f416ec09499d9d19);
 CAPNP_DECLARE_SCHEMA(a1680744031fdb2d);
 CAPNP_DECLARE_SCHEMA(b73df234a23b0cc2);
@@ -269,6 +262,20 @@ CAPNP_DECLARE_SCHEMA(fc6241ed8877b611);
 CAPNP_DECLARE_SCHEMA(a30662f84033036c);
 CAPNP_DECLARE_SCHEMA(c86a3d38d13eb3ef);
 CAPNP_DECLARE_SCHEMA(a4f1eb3323f5f582);
+CAPNP_DECLARE_SCHEMA(c879af11c43cb400);
+CAPNP_DECLARE_SCHEMA(ccb70bda9f514d49);
+CAPNP_DECLARE_SCHEMA(abd7e3df0ec3f056);
+enum class CruiseIntent_abd7e3df0ec3f056: uint16_t {
+  NONE,
+  INCREMENT,
+  DECREMENT,
+  CONFIRM,
+  DECLINE,
+  DISMISS,
+};
+CAPNP_DECLARE_ENUM(CruiseIntent, abd7e3df0ec3f056);
+CAPNP_DECLARE_SCHEMA(aadf9bc39b7bd41e);
+CAPNP_DECLARE_SCHEMA(b7d4424da62d8512);
 
 }  // namespace schemas
 }  // namespace capnp
@@ -717,12 +724,28 @@ struct CarControlSP {
   class Reader;
   class Builder;
   class Pipeline;
+  struct TurnAssistDEPRECATED;
   struct Param;
   typedef ::capnp::schemas::ParamType_ea24c774913a9952 ParamType;
 
 
   struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(a5cd762cd951a455, 0, 5)
+    CAPNP_DECLARE_STRUCT_HEADER(a5cd762cd951a455, 0, 7)
+    #if !CAPNP_LITE
+    static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
+    #endif  // !CAPNP_LITE
+  };
+};
+
+struct CarControlSP::TurnAssistDEPRECATED {
+  TurnAssistDEPRECATED() = delete;
+
+  class Reader;
+  class Builder;
+  class Pipeline;
+
+  struct _capnpPrivate {
+    CAPNP_DECLARE_STRUCT_HEADER(a0bdba5e21501f8a, 1, 0)
     #if !CAPNP_LITE
     static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
     #endif  // !CAPNP_LITE
@@ -815,27 +838,9 @@ struct CarStateSP {
   class Reader;
   class Builder;
   class Pipeline;
-  struct CruiseSession;
 
   struct _capnpPrivate {
     CAPNP_DECLARE_STRUCT_HEADER(b86e6369214c01c8, 1, 1)
-    #if !CAPNP_LITE
-    static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
-    #endif  // !CAPNP_LITE
-  };
-};
-
-struct CarStateSP::CruiseSession {
-  CruiseSession() = delete;
-
-  class Reader;
-  class Builder;
-  class Pipeline;
-  typedef ::capnp::schemas::CruiseIntent_cfaed8415fc4f2e1 CruiseIntent;
-
-
-  struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(8a8ccab429a24d9f, 2, 0)
     #if !CAPNP_LITE
     static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
     #endif  // !CAPNP_LITE
@@ -1017,7 +1022,71 @@ struct CustomReserved19 {
   class Pipeline;
 
   struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(a4f1eb3323f5f582, 0, 0)
+    CAPNP_DECLARE_STRUCT_HEADER(a4f1eb3323f5f582, 1, 5)
+    #if !CAPNP_LITE
+    static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
+    #endif  // !CAPNP_LITE
+  };
+};
+
+struct CarStateZP {
+  CarStateZP() = delete;
+
+  class Reader;
+  class Builder;
+  class Pipeline;
+  struct CruiseSession;
+
+  struct _capnpPrivate {
+    CAPNP_DECLARE_STRUCT_HEADER(c879af11c43cb400, 0, 1)
+    #if !CAPNP_LITE
+    static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
+    #endif  // !CAPNP_LITE
+  };
+};
+
+struct CarStateZP::CruiseSession {
+  CruiseSession() = delete;
+
+  class Reader;
+  class Builder;
+  class Pipeline;
+  typedef ::capnp::schemas::CruiseIntent_abd7e3df0ec3f056 CruiseIntent;
+
+
+  struct _capnpPrivate {
+    CAPNP_DECLARE_STRUCT_HEADER(ccb70bda9f514d49, 2, 0)
+    #if !CAPNP_LITE
+    static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
+    #endif  // !CAPNP_LITE
+  };
+};
+
+struct CarControlZP {
+  CarControlZP() = delete;
+
+  class Reader;
+  class Builder;
+  class Pipeline;
+  struct LaneChangeSmoothing;
+
+  struct _capnpPrivate {
+    CAPNP_DECLARE_STRUCT_HEADER(aadf9bc39b7bd41e, 0, 1)
+    #if !CAPNP_LITE
+    static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
+    #endif  // !CAPNP_LITE
+  };
+};
+
+struct CarControlZP::LaneChangeSmoothing {
+  LaneChangeSmoothing() = delete;
+
+  class Reader;
+  class Builder;
+  class Pipeline;
+
+  struct _capnpPrivate {
+    CAPNP_DECLARE_STRUCT_HEADER(b7d4424da62d8512, 1, 0)
     #if !CAPNP_LITE
     static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
     #endif  // !CAPNP_LITE
@@ -2641,6 +2710,8 @@ public:
 
   inline bool getActive() const;
 
+  inline float getVAheadMin() const;
+
 private:
   ::capnp::_::StructReader _reader;
   template <typename, ::capnp::Kind>
@@ -2689,6 +2760,9 @@ public:
 
   inline bool getActive();
   inline void setActive(bool value);
+
+  inline float getVAheadMin();
+  inline void setVAheadMin(float value);
 
 private:
   ::capnp::_::StructBuilder _builder;
@@ -3722,6 +3796,12 @@ public:
   inline bool hasIntelligentCruiseButtonManagement() const;
   inline  ::cereal::IntelligentCruiseButtonManagement::Reader getIntelligentCruiseButtonManagement() const;
 
+  inline bool hasTurnAssistDEPRECATED() const;
+  inline  ::cereal::CarControlSP::TurnAssistDEPRECATED::Reader getTurnAssistDEPRECATED() const;
+
+  inline bool hasZoompilot() const;
+  inline  ::cereal::CarControlZP::Reader getZoompilot() const;
+
 private:
   ::capnp::_::StructReader _reader;
   template <typename, ::capnp::Kind>
@@ -3785,6 +3865,20 @@ public:
   inline void adoptIntelligentCruiseButtonManagement(::capnp::Orphan< ::cereal::IntelligentCruiseButtonManagement>&& value);
   inline ::capnp::Orphan< ::cereal::IntelligentCruiseButtonManagement> disownIntelligentCruiseButtonManagement();
 
+  inline bool hasTurnAssistDEPRECATED();
+  inline  ::cereal::CarControlSP::TurnAssistDEPRECATED::Builder getTurnAssistDEPRECATED();
+  inline void setTurnAssistDEPRECATED( ::cereal::CarControlSP::TurnAssistDEPRECATED::Reader value);
+  inline  ::cereal::CarControlSP::TurnAssistDEPRECATED::Builder initTurnAssistDEPRECATED();
+  inline void adoptTurnAssistDEPRECATED(::capnp::Orphan< ::cereal::CarControlSP::TurnAssistDEPRECATED>&& value);
+  inline ::capnp::Orphan< ::cereal::CarControlSP::TurnAssistDEPRECATED> disownTurnAssistDEPRECATED();
+
+  inline bool hasZoompilot();
+  inline  ::cereal::CarControlZP::Builder getZoompilot();
+  inline void setZoompilot( ::cereal::CarControlZP::Reader value);
+  inline  ::cereal::CarControlZP::Builder initZoompilot();
+  inline void adoptZoompilot(::capnp::Orphan< ::cereal::CarControlZP>&& value);
+  inline ::capnp::Orphan< ::cereal::CarControlZP> disownZoompilot();
+
 private:
   ::capnp::_::StructBuilder _builder;
   template <typename, ::capnp::Kind>
@@ -3807,6 +3901,89 @@ public:
   inline  ::cereal::LeadData::Pipeline getLeadOne();
   inline  ::cereal::LeadData::Pipeline getLeadTwo();
   inline  ::cereal::IntelligentCruiseButtonManagement::Pipeline getIntelligentCruiseButtonManagement();
+  inline  ::cereal::CarControlSP::TurnAssistDEPRECATED::Pipeline getTurnAssistDEPRECATED();
+  inline  ::cereal::CarControlZP::Pipeline getZoompilot();
+private:
+  ::capnp::AnyPointer::Pipeline _typeless;
+  friend class ::capnp::PipelineHook;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+};
+#endif  // !CAPNP_LITE
+
+class CarControlSP::TurnAssistDEPRECATED::Reader {
+public:
+  typedef TurnAssistDEPRECATED Reads;
+
+  Reader() = default;
+  inline explicit Reader(::capnp::_::StructReader base): _reader(base) {}
+
+  inline ::capnp::MessageSize totalSize() const {
+    return _reader.totalSize().asPublic();
+  }
+
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const {
+    return ::capnp::_::structString(_reader, *_capnpPrivate::brand());
+  }
+#endif  // !CAPNP_LITE
+
+  inline float getHoldCurvature() const;
+
+  inline float getLeadCurvature() const;
+
+private:
+  ::capnp::_::StructReader _reader;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::_::PointerHelpers;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::List;
+  friend class ::capnp::MessageBuilder;
+  friend class ::capnp::Orphanage;
+};
+
+class CarControlSP::TurnAssistDEPRECATED::Builder {
+public:
+  typedef TurnAssistDEPRECATED Builds;
+
+  Builder() = delete;  // Deleted to discourage incorrect usage.
+                       // You can explicitly initialize to nullptr instead.
+  inline Builder(decltype(nullptr)) {}
+  inline explicit Builder(::capnp::_::StructBuilder base): _builder(base) {}
+  inline operator Reader() const { return Reader(_builder.asReader()); }
+  inline Reader asReader() const { return *this; }
+
+  inline ::capnp::MessageSize totalSize() const { return asReader().totalSize(); }
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const { return asReader().toString(); }
+#endif  // !CAPNP_LITE
+
+  inline float getHoldCurvature();
+  inline void setHoldCurvature(float value);
+
+  inline float getLeadCurvature();
+  inline void setLeadCurvature(float value);
+
+private:
+  ::capnp::_::StructBuilder _builder;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+  friend class ::capnp::Orphanage;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::_::PointerHelpers;
+};
+
+#if !CAPNP_LITE
+class CarControlSP::TurnAssistDEPRECATED::Pipeline {
+public:
+  typedef TurnAssistDEPRECATED Pipelines;
+
+  inline Pipeline(decltype(nullptr)): _typeless(nullptr) {}
+  inline explicit Pipeline(::capnp::AnyPointer::Pipeline&& typeless)
+      : _typeless(kj::mv(typeless)) {}
+
 private:
   ::capnp::AnyPointer::Pipeline _typeless;
   friend class ::capnp::PipelineHook;
@@ -4407,8 +4584,8 @@ public:
 
   inline float getSpeedLimit() const;
 
-  inline bool hasCruiseSession() const;
-  inline  ::cereal::CarStateSP::CruiseSession::Reader getCruiseSession() const;
+  inline bool hasZoompilot() const;
+  inline  ::cereal::CarStateZP::Reader getZoompilot() const;
 
 private:
   ::capnp::_::StructReader _reader;
@@ -4441,12 +4618,12 @@ public:
   inline float getSpeedLimit();
   inline void setSpeedLimit(float value);
 
-  inline bool hasCruiseSession();
-  inline  ::cereal::CarStateSP::CruiseSession::Builder getCruiseSession();
-  inline void setCruiseSession( ::cereal::CarStateSP::CruiseSession::Reader value);
-  inline  ::cereal::CarStateSP::CruiseSession::Builder initCruiseSession();
-  inline void adoptCruiseSession(::capnp::Orphan< ::cereal::CarStateSP::CruiseSession>&& value);
-  inline ::capnp::Orphan< ::cereal::CarStateSP::CruiseSession> disownCruiseSession();
+  inline bool hasZoompilot();
+  inline  ::cereal::CarStateZP::Builder getZoompilot();
+  inline void setZoompilot( ::cereal::CarStateZP::Reader value);
+  inline  ::cereal::CarStateZP::Builder initZoompilot();
+  inline void adoptZoompilot(::capnp::Orphan< ::cereal::CarStateZP>&& value);
+  inline ::capnp::Orphan< ::cereal::CarStateZP> disownZoompilot();
 
 private:
   ::capnp::_::StructBuilder _builder;
@@ -4466,98 +4643,7 @@ public:
   inline explicit Pipeline(::capnp::AnyPointer::Pipeline&& typeless)
       : _typeless(kj::mv(typeless)) {}
 
-  inline  ::cereal::CarStateSP::CruiseSession::Pipeline getCruiseSession();
-private:
-  ::capnp::AnyPointer::Pipeline _typeless;
-  friend class ::capnp::PipelineHook;
-  template <typename, ::capnp::Kind>
-  friend struct ::capnp::ToDynamic_;
-};
-#endif  // !CAPNP_LITE
-
-class CarStateSP::CruiseSession::Reader {
-public:
-  typedef CruiseSession Reads;
-
-  Reader() = default;
-  inline explicit Reader(::capnp::_::StructReader base): _reader(base) {}
-
-  inline ::capnp::MessageSize totalSize() const {
-    return _reader.totalSize().asPublic();
-  }
-
-#if !CAPNP_LITE
-  inline ::kj::StringTree toString() const {
-    return ::capnp::_::structString(_reader, *_capnpPrivate::brand());
-  }
-#endif  // !CAPNP_LITE
-
-  inline  ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState getState() const;
-
-  inline float getVCap() const;
-
-  inline  ::cereal::CarStateSP::CruiseSession::CruiseIntent getLastIntent() const;
-
-  inline  ::uint32_t getAnnounceCounter() const;
-
-private:
-  ::capnp::_::StructReader _reader;
-  template <typename, ::capnp::Kind>
-  friend struct ::capnp::ToDynamic_;
-  template <typename, ::capnp::Kind>
-  friend struct ::capnp::_::PointerHelpers;
-  template <typename, ::capnp::Kind>
-  friend struct ::capnp::List;
-  friend class ::capnp::MessageBuilder;
-  friend class ::capnp::Orphanage;
-};
-
-class CarStateSP::CruiseSession::Builder {
-public:
-  typedef CruiseSession Builds;
-
-  Builder() = delete;  // Deleted to discourage incorrect usage.
-                       // You can explicitly initialize to nullptr instead.
-  inline Builder(decltype(nullptr)) {}
-  inline explicit Builder(::capnp::_::StructBuilder base): _builder(base) {}
-  inline operator Reader() const { return Reader(_builder.asReader()); }
-  inline Reader asReader() const { return *this; }
-
-  inline ::capnp::MessageSize totalSize() const { return asReader().totalSize(); }
-#if !CAPNP_LITE
-  inline ::kj::StringTree toString() const { return asReader().toString(); }
-#endif  // !CAPNP_LITE
-
-  inline  ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState getState();
-  inline void setState( ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState value);
-
-  inline float getVCap();
-  inline void setVCap(float value);
-
-  inline  ::cereal::CarStateSP::CruiseSession::CruiseIntent getLastIntent();
-  inline void setLastIntent( ::cereal::CarStateSP::CruiseSession::CruiseIntent value);
-
-  inline  ::uint32_t getAnnounceCounter();
-  inline void setAnnounceCounter( ::uint32_t value);
-
-private:
-  ::capnp::_::StructBuilder _builder;
-  template <typename, ::capnp::Kind>
-  friend struct ::capnp::ToDynamic_;
-  friend class ::capnp::Orphanage;
-  template <typename, ::capnp::Kind>
-  friend struct ::capnp::_::PointerHelpers;
-};
-
-#if !CAPNP_LITE
-class CarStateSP::CruiseSession::Pipeline {
-public:
-  typedef CruiseSession Pipelines;
-
-  inline Pipeline(decltype(nullptr)): _typeless(nullptr) {}
-  inline explicit Pipeline(::capnp::AnyPointer::Pipeline&& typeless)
-      : _typeless(kj::mv(typeless)) {}
-
+  inline  ::cereal::CarStateZP::Pipeline getZoompilot();
 private:
   ::capnp::AnyPointer::Pipeline _typeless;
   friend class ::capnp::PipelineHook;
@@ -5414,6 +5500,25 @@ public:
   }
 #endif  // !CAPNP_LITE
 
+  inline  ::int32_t getVersion() const;
+
+  inline bool hasSpeedBinCenters() const;
+  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader getSpeedBinCenters() const;
+
+  inline bool hasSpeedBinLatAccelFactors() const;
+  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader getSpeedBinLatAccelFactors() const;
+
+  inline bool hasSpeedBinFrictions() const;
+  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader getSpeedBinFrictions() const;
+
+  inline bool hasSpeedBinValid() const;
+  inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Reader getSpeedBinValid() const;
+
+  inline bool hasSpeedBinPoints() const;
+  inline  ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Reader getSpeedBinPoints() const;
+
+  inline  ::int32_t getSeedVersion() const;
+
 private:
   ::capnp::_::StructReader _reader;
   template <typename, ::capnp::Kind>
@@ -5442,6 +5547,52 @@ public:
   inline ::kj::StringTree toString() const { return asReader().toString(); }
 #endif  // !CAPNP_LITE
 
+  inline  ::int32_t getVersion();
+  inline void setVersion( ::int32_t value);
+
+  inline bool hasSpeedBinCenters();
+  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder getSpeedBinCenters();
+  inline void setSpeedBinCenters( ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader value);
+  inline void setSpeedBinCenters(::kj::ArrayPtr<const float> value);
+  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder initSpeedBinCenters(unsigned int size);
+  inline void adoptSpeedBinCenters(::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>&& value);
+  inline ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>> disownSpeedBinCenters();
+
+  inline bool hasSpeedBinLatAccelFactors();
+  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder getSpeedBinLatAccelFactors();
+  inline void setSpeedBinLatAccelFactors( ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader value);
+  inline void setSpeedBinLatAccelFactors(::kj::ArrayPtr<const float> value);
+  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder initSpeedBinLatAccelFactors(unsigned int size);
+  inline void adoptSpeedBinLatAccelFactors(::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>&& value);
+  inline ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>> disownSpeedBinLatAccelFactors();
+
+  inline bool hasSpeedBinFrictions();
+  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder getSpeedBinFrictions();
+  inline void setSpeedBinFrictions( ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader value);
+  inline void setSpeedBinFrictions(::kj::ArrayPtr<const float> value);
+  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder initSpeedBinFrictions(unsigned int size);
+  inline void adoptSpeedBinFrictions(::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>&& value);
+  inline ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>> disownSpeedBinFrictions();
+
+  inline bool hasSpeedBinValid();
+  inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Builder getSpeedBinValid();
+  inline void setSpeedBinValid( ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Reader value);
+  inline void setSpeedBinValid(::kj::ArrayPtr<const bool> value);
+  inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Builder initSpeedBinValid(unsigned int size);
+  inline void adoptSpeedBinValid(::capnp::Orphan< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>&& value);
+  inline ::capnp::Orphan< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>> disownSpeedBinValid();
+
+  inline bool hasSpeedBinPoints();
+  inline  ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Builder getSpeedBinPoints();
+  inline void setSpeedBinPoints( ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Reader value);
+  inline void setSpeedBinPoints(::kj::ArrayPtr<const  ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>::Reader> value);
+  inline  ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Builder initSpeedBinPoints(unsigned int size);
+  inline void adoptSpeedBinPoints(::capnp::Orphan< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>&& value);
+  inline ::capnp::Orphan< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>> disownSpeedBinPoints();
+
+  inline  ::int32_t getSeedVersion();
+  inline void setSeedVersion( ::int32_t value);
+
 private:
   ::capnp::_::StructBuilder _builder;
   template <typename, ::capnp::Kind>
@@ -5455,6 +5606,337 @@ private:
 class CustomReserved19::Pipeline {
 public:
   typedef CustomReserved19 Pipelines;
+
+  inline Pipeline(decltype(nullptr)): _typeless(nullptr) {}
+  inline explicit Pipeline(::capnp::AnyPointer::Pipeline&& typeless)
+      : _typeless(kj::mv(typeless)) {}
+
+private:
+  ::capnp::AnyPointer::Pipeline _typeless;
+  friend class ::capnp::PipelineHook;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+};
+#endif  // !CAPNP_LITE
+
+class CarStateZP::Reader {
+public:
+  typedef CarStateZP Reads;
+
+  Reader() = default;
+  inline explicit Reader(::capnp::_::StructReader base): _reader(base) {}
+
+  inline ::capnp::MessageSize totalSize() const {
+    return _reader.totalSize().asPublic();
+  }
+
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const {
+    return ::capnp::_::structString(_reader, *_capnpPrivate::brand());
+  }
+#endif  // !CAPNP_LITE
+
+  inline bool hasCruiseSession() const;
+  inline  ::cereal::CarStateZP::CruiseSession::Reader getCruiseSession() const;
+
+private:
+  ::capnp::_::StructReader _reader;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::_::PointerHelpers;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::List;
+  friend class ::capnp::MessageBuilder;
+  friend class ::capnp::Orphanage;
+};
+
+class CarStateZP::Builder {
+public:
+  typedef CarStateZP Builds;
+
+  Builder() = delete;  // Deleted to discourage incorrect usage.
+                       // You can explicitly initialize to nullptr instead.
+  inline Builder(decltype(nullptr)) {}
+  inline explicit Builder(::capnp::_::StructBuilder base): _builder(base) {}
+  inline operator Reader() const { return Reader(_builder.asReader()); }
+  inline Reader asReader() const { return *this; }
+
+  inline ::capnp::MessageSize totalSize() const { return asReader().totalSize(); }
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const { return asReader().toString(); }
+#endif  // !CAPNP_LITE
+
+  inline bool hasCruiseSession();
+  inline  ::cereal::CarStateZP::CruiseSession::Builder getCruiseSession();
+  inline void setCruiseSession( ::cereal::CarStateZP::CruiseSession::Reader value);
+  inline  ::cereal::CarStateZP::CruiseSession::Builder initCruiseSession();
+  inline void adoptCruiseSession(::capnp::Orphan< ::cereal::CarStateZP::CruiseSession>&& value);
+  inline ::capnp::Orphan< ::cereal::CarStateZP::CruiseSession> disownCruiseSession();
+
+private:
+  ::capnp::_::StructBuilder _builder;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+  friend class ::capnp::Orphanage;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::_::PointerHelpers;
+};
+
+#if !CAPNP_LITE
+class CarStateZP::Pipeline {
+public:
+  typedef CarStateZP Pipelines;
+
+  inline Pipeline(decltype(nullptr)): _typeless(nullptr) {}
+  inline explicit Pipeline(::capnp::AnyPointer::Pipeline&& typeless)
+      : _typeless(kj::mv(typeless)) {}
+
+  inline  ::cereal::CarStateZP::CruiseSession::Pipeline getCruiseSession();
+private:
+  ::capnp::AnyPointer::Pipeline _typeless;
+  friend class ::capnp::PipelineHook;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+};
+#endif  // !CAPNP_LITE
+
+class CarStateZP::CruiseSession::Reader {
+public:
+  typedef CruiseSession Reads;
+
+  Reader() = default;
+  inline explicit Reader(::capnp::_::StructReader base): _reader(base) {}
+
+  inline ::capnp::MessageSize totalSize() const {
+    return _reader.totalSize().asPublic();
+  }
+
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const {
+    return ::capnp::_::structString(_reader, *_capnpPrivate::brand());
+  }
+#endif  // !CAPNP_LITE
+
+  inline  ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState getState() const;
+
+  inline float getVCap() const;
+
+  inline  ::cereal::CarStateZP::CruiseSession::CruiseIntent getLastIntent() const;
+
+  inline  ::uint32_t getAnnounceCounter() const;
+
+private:
+  ::capnp::_::StructReader _reader;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::_::PointerHelpers;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::List;
+  friend class ::capnp::MessageBuilder;
+  friend class ::capnp::Orphanage;
+};
+
+class CarStateZP::CruiseSession::Builder {
+public:
+  typedef CruiseSession Builds;
+
+  Builder() = delete;  // Deleted to discourage incorrect usage.
+                       // You can explicitly initialize to nullptr instead.
+  inline Builder(decltype(nullptr)) {}
+  inline explicit Builder(::capnp::_::StructBuilder base): _builder(base) {}
+  inline operator Reader() const { return Reader(_builder.asReader()); }
+  inline Reader asReader() const { return *this; }
+
+  inline ::capnp::MessageSize totalSize() const { return asReader().totalSize(); }
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const { return asReader().toString(); }
+#endif  // !CAPNP_LITE
+
+  inline  ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState getState();
+  inline void setState( ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState value);
+
+  inline float getVCap();
+  inline void setVCap(float value);
+
+  inline  ::cereal::CarStateZP::CruiseSession::CruiseIntent getLastIntent();
+  inline void setLastIntent( ::cereal::CarStateZP::CruiseSession::CruiseIntent value);
+
+  inline  ::uint32_t getAnnounceCounter();
+  inline void setAnnounceCounter( ::uint32_t value);
+
+private:
+  ::capnp::_::StructBuilder _builder;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+  friend class ::capnp::Orphanage;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::_::PointerHelpers;
+};
+
+#if !CAPNP_LITE
+class CarStateZP::CruiseSession::Pipeline {
+public:
+  typedef CruiseSession Pipelines;
+
+  inline Pipeline(decltype(nullptr)): _typeless(nullptr) {}
+  inline explicit Pipeline(::capnp::AnyPointer::Pipeline&& typeless)
+      : _typeless(kj::mv(typeless)) {}
+
+private:
+  ::capnp::AnyPointer::Pipeline _typeless;
+  friend class ::capnp::PipelineHook;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+};
+#endif  // !CAPNP_LITE
+
+class CarControlZP::Reader {
+public:
+  typedef CarControlZP Reads;
+
+  Reader() = default;
+  inline explicit Reader(::capnp::_::StructReader base): _reader(base) {}
+
+  inline ::capnp::MessageSize totalSize() const {
+    return _reader.totalSize().asPublic();
+  }
+
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const {
+    return ::capnp::_::structString(_reader, *_capnpPrivate::brand());
+  }
+#endif  // !CAPNP_LITE
+
+  inline bool hasLaneChangeSmoothing() const;
+  inline  ::cereal::CarControlZP::LaneChangeSmoothing::Reader getLaneChangeSmoothing() const;
+
+private:
+  ::capnp::_::StructReader _reader;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::_::PointerHelpers;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::List;
+  friend class ::capnp::MessageBuilder;
+  friend class ::capnp::Orphanage;
+};
+
+class CarControlZP::Builder {
+public:
+  typedef CarControlZP Builds;
+
+  Builder() = delete;  // Deleted to discourage incorrect usage.
+                       // You can explicitly initialize to nullptr instead.
+  inline Builder(decltype(nullptr)) {}
+  inline explicit Builder(::capnp::_::StructBuilder base): _builder(base) {}
+  inline operator Reader() const { return Reader(_builder.asReader()); }
+  inline Reader asReader() const { return *this; }
+
+  inline ::capnp::MessageSize totalSize() const { return asReader().totalSize(); }
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const { return asReader().toString(); }
+#endif  // !CAPNP_LITE
+
+  inline bool hasLaneChangeSmoothing();
+  inline  ::cereal::CarControlZP::LaneChangeSmoothing::Builder getLaneChangeSmoothing();
+  inline void setLaneChangeSmoothing( ::cereal::CarControlZP::LaneChangeSmoothing::Reader value);
+  inline  ::cereal::CarControlZP::LaneChangeSmoothing::Builder initLaneChangeSmoothing();
+  inline void adoptLaneChangeSmoothing(::capnp::Orphan< ::cereal::CarControlZP::LaneChangeSmoothing>&& value);
+  inline ::capnp::Orphan< ::cereal::CarControlZP::LaneChangeSmoothing> disownLaneChangeSmoothing();
+
+private:
+  ::capnp::_::StructBuilder _builder;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+  friend class ::capnp::Orphanage;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::_::PointerHelpers;
+};
+
+#if !CAPNP_LITE
+class CarControlZP::Pipeline {
+public:
+  typedef CarControlZP Pipelines;
+
+  inline Pipeline(decltype(nullptr)): _typeless(nullptr) {}
+  inline explicit Pipeline(::capnp::AnyPointer::Pipeline&& typeless)
+      : _typeless(kj::mv(typeless)) {}
+
+  inline  ::cereal::CarControlZP::LaneChangeSmoothing::Pipeline getLaneChangeSmoothing();
+private:
+  ::capnp::AnyPointer::Pipeline _typeless;
+  friend class ::capnp::PipelineHook;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+};
+#endif  // !CAPNP_LITE
+
+class CarControlZP::LaneChangeSmoothing::Reader {
+public:
+  typedef LaneChangeSmoothing Reads;
+
+  Reader() = default;
+  inline explicit Reader(::capnp::_::StructReader base): _reader(base) {}
+
+  inline ::capnp::MessageSize totalSize() const {
+    return _reader.totalSize().asPublic();
+  }
+
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const {
+    return ::capnp::_::structString(_reader, *_capnpPrivate::brand());
+  }
+#endif  // !CAPNP_LITE
+
+  inline float getJerkFactor() const;
+
+private:
+  ::capnp::_::StructReader _reader;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::_::PointerHelpers;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::List;
+  friend class ::capnp::MessageBuilder;
+  friend class ::capnp::Orphanage;
+};
+
+class CarControlZP::LaneChangeSmoothing::Builder {
+public:
+  typedef LaneChangeSmoothing Builds;
+
+  Builder() = delete;  // Deleted to discourage incorrect usage.
+                       // You can explicitly initialize to nullptr instead.
+  inline Builder(decltype(nullptr)) {}
+  inline explicit Builder(::capnp::_::StructBuilder base): _builder(base) {}
+  inline operator Reader() const { return Reader(_builder.asReader()); }
+  inline Reader asReader() const { return *this; }
+
+  inline ::capnp::MessageSize totalSize() const { return asReader().totalSize(); }
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const { return asReader().toString(); }
+#endif  // !CAPNP_LITE
+
+  inline float getJerkFactor();
+  inline void setJerkFactor(float value);
+
+private:
+  ::capnp::_::StructBuilder _builder;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::ToDynamic_;
+  friend class ::capnp::Orphanage;
+  template <typename, ::capnp::Kind>
+  friend struct ::capnp::_::PointerHelpers;
+};
+
+#if !CAPNP_LITE
+class CarControlZP::LaneChangeSmoothing::Pipeline {
+public:
+  typedef LaneChangeSmoothing Pipelines;
 
   inline Pipeline(decltype(nullptr)): _typeless(nullptr) {}
   inline explicit Pipeline(::capnp::AnyPointer::Pipeline&& typeless)
@@ -7232,6 +7714,20 @@ inline void LongitudinalPlanSP::SmartCruiseControl::Vision::Builder::setActive(b
       ::capnp::bounded<17>() * ::capnp::ELEMENTS, value);
 }
 
+inline float LongitudinalPlanSP::SmartCruiseControl::Vision::Reader::getVAheadMin() const {
+  return _reader.getDataField<float>(
+      ::capnp::bounded<5>() * ::capnp::ELEMENTS);
+}
+
+inline float LongitudinalPlanSP::SmartCruiseControl::Vision::Builder::getVAheadMin() {
+  return _builder.getDataField<float>(
+      ::capnp::bounded<5>() * ::capnp::ELEMENTS);
+}
+inline void LongitudinalPlanSP::SmartCruiseControl::Vision::Builder::setVAheadMin(float value) {
+  _builder.setDataField<float>(
+      ::capnp::bounded<5>() * ::capnp::ELEMENTS, value);
+}
+
 inline  ::cereal::LongitudinalPlanSP::SmartCruiseControl::MapState LongitudinalPlanSP::SmartCruiseControl::Map::Reader::getState() const {
   return _reader.getDataField< ::cereal::LongitudinalPlanSP::SmartCruiseControl::MapState>(
       ::capnp::bounded<0>() * ::capnp::ELEMENTS);
@@ -8212,6 +8708,112 @@ inline ::capnp::Orphan< ::cereal::IntelligentCruiseButtonManagement> CarControlS
       ::capnp::bounded<4>() * ::capnp::POINTERS));
 }
 
+inline bool CarControlSP::Reader::hasTurnAssistDEPRECATED() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS).isNull();
+}
+inline bool CarControlSP::Builder::hasTurnAssistDEPRECATED() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS).isNull();
+}
+inline  ::cereal::CarControlSP::TurnAssistDEPRECATED::Reader CarControlSP::Reader::getTurnAssistDEPRECATED() const {
+  return ::capnp::_::PointerHelpers< ::cereal::CarControlSP::TurnAssistDEPRECATED>::get(_reader.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS));
+}
+inline  ::cereal::CarControlSP::TurnAssistDEPRECATED::Builder CarControlSP::Builder::getTurnAssistDEPRECATED() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarControlSP::TurnAssistDEPRECATED>::get(_builder.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS));
+}
+#if !CAPNP_LITE
+inline  ::cereal::CarControlSP::TurnAssistDEPRECATED::Pipeline CarControlSP::Pipeline::getTurnAssistDEPRECATED() {
+  return  ::cereal::CarControlSP::TurnAssistDEPRECATED::Pipeline(_typeless.getPointerField(5));
+}
+#endif  // !CAPNP_LITE
+inline void CarControlSP::Builder::setTurnAssistDEPRECATED( ::cereal::CarControlSP::TurnAssistDEPRECATED::Reader value) {
+  ::capnp::_::PointerHelpers< ::cereal::CarControlSP::TurnAssistDEPRECATED>::set(_builder.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS), value);
+}
+inline  ::cereal::CarControlSP::TurnAssistDEPRECATED::Builder CarControlSP::Builder::initTurnAssistDEPRECATED() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarControlSP::TurnAssistDEPRECATED>::init(_builder.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS));
+}
+inline void CarControlSP::Builder::adoptTurnAssistDEPRECATED(
+    ::capnp::Orphan< ::cereal::CarControlSP::TurnAssistDEPRECATED>&& value) {
+  ::capnp::_::PointerHelpers< ::cereal::CarControlSP::TurnAssistDEPRECATED>::adopt(_builder.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::cereal::CarControlSP::TurnAssistDEPRECATED> CarControlSP::Builder::disownTurnAssistDEPRECATED() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarControlSP::TurnAssistDEPRECATED>::disown(_builder.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS));
+}
+
+inline bool CarControlSP::Reader::hasZoompilot() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS).isNull();
+}
+inline bool CarControlSP::Builder::hasZoompilot() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS).isNull();
+}
+inline  ::cereal::CarControlZP::Reader CarControlSP::Reader::getZoompilot() const {
+  return ::capnp::_::PointerHelpers< ::cereal::CarControlZP>::get(_reader.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS));
+}
+inline  ::cereal::CarControlZP::Builder CarControlSP::Builder::getZoompilot() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarControlZP>::get(_builder.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS));
+}
+#if !CAPNP_LITE
+inline  ::cereal::CarControlZP::Pipeline CarControlSP::Pipeline::getZoompilot() {
+  return  ::cereal::CarControlZP::Pipeline(_typeless.getPointerField(6));
+}
+#endif  // !CAPNP_LITE
+inline void CarControlSP::Builder::setZoompilot( ::cereal::CarControlZP::Reader value) {
+  ::capnp::_::PointerHelpers< ::cereal::CarControlZP>::set(_builder.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS), value);
+}
+inline  ::cereal::CarControlZP::Builder CarControlSP::Builder::initZoompilot() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarControlZP>::init(_builder.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS));
+}
+inline void CarControlSP::Builder::adoptZoompilot(
+    ::capnp::Orphan< ::cereal::CarControlZP>&& value) {
+  ::capnp::_::PointerHelpers< ::cereal::CarControlZP>::adopt(_builder.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::cereal::CarControlZP> CarControlSP::Builder::disownZoompilot() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarControlZP>::disown(_builder.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS));
+}
+
+inline float CarControlSP::TurnAssistDEPRECATED::Reader::getHoldCurvature() const {
+  return _reader.getDataField<float>(
+      ::capnp::bounded<0>() * ::capnp::ELEMENTS);
+}
+
+inline float CarControlSP::TurnAssistDEPRECATED::Builder::getHoldCurvature() {
+  return _builder.getDataField<float>(
+      ::capnp::bounded<0>() * ::capnp::ELEMENTS);
+}
+inline void CarControlSP::TurnAssistDEPRECATED::Builder::setHoldCurvature(float value) {
+  _builder.setDataField<float>(
+      ::capnp::bounded<0>() * ::capnp::ELEMENTS, value);
+}
+
+inline float CarControlSP::TurnAssistDEPRECATED::Reader::getLeadCurvature() const {
+  return _reader.getDataField<float>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
+}
+
+inline float CarControlSP::TurnAssistDEPRECATED::Builder::getLeadCurvature() {
+  return _builder.getDataField<float>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
+}
+inline void CarControlSP::TurnAssistDEPRECATED::Builder::setLeadCurvature(float value) {
+  _builder.setDataField<float>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS, value);
+}
+
 inline bool CarControlSP::Param::Reader::hasKey() const {
   return !_reader.getPointerField(
       ::capnp::bounded<0>() * ::capnp::POINTERS).isNull();
@@ -8938,99 +9540,43 @@ inline void CarStateSP::Builder::setSpeedLimit(float value) {
       ::capnp::bounded<0>() * ::capnp::ELEMENTS, value);
 }
 
-inline bool CarStateSP::Reader::hasCruiseSession() const {
+inline bool CarStateSP::Reader::hasZoompilot() const {
   return !_reader.getPointerField(
       ::capnp::bounded<0>() * ::capnp::POINTERS).isNull();
 }
-inline bool CarStateSP::Builder::hasCruiseSession() {
+inline bool CarStateSP::Builder::hasZoompilot() {
   return !_builder.getPointerField(
       ::capnp::bounded<0>() * ::capnp::POINTERS).isNull();
 }
-inline  ::cereal::CarStateSP::CruiseSession::Reader CarStateSP::Reader::getCruiseSession() const {
-  return ::capnp::_::PointerHelpers< ::cereal::CarStateSP::CruiseSession>::get(_reader.getPointerField(
+inline  ::cereal::CarStateZP::Reader CarStateSP::Reader::getZoompilot() const {
+  return ::capnp::_::PointerHelpers< ::cereal::CarStateZP>::get(_reader.getPointerField(
       ::capnp::bounded<0>() * ::capnp::POINTERS));
 }
-inline  ::cereal::CarStateSP::CruiseSession::Builder CarStateSP::Builder::getCruiseSession() {
-  return ::capnp::_::PointerHelpers< ::cereal::CarStateSP::CruiseSession>::get(_builder.getPointerField(
+inline  ::cereal::CarStateZP::Builder CarStateSP::Builder::getZoompilot() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarStateZP>::get(_builder.getPointerField(
       ::capnp::bounded<0>() * ::capnp::POINTERS));
 }
 #if !CAPNP_LITE
-inline  ::cereal::CarStateSP::CruiseSession::Pipeline CarStateSP::Pipeline::getCruiseSession() {
-  return  ::cereal::CarStateSP::CruiseSession::Pipeline(_typeless.getPointerField(0));
+inline  ::cereal::CarStateZP::Pipeline CarStateSP::Pipeline::getZoompilot() {
+  return  ::cereal::CarStateZP::Pipeline(_typeless.getPointerField(0));
 }
 #endif  // !CAPNP_LITE
-inline void CarStateSP::Builder::setCruiseSession( ::cereal::CarStateSP::CruiseSession::Reader value) {
-  ::capnp::_::PointerHelpers< ::cereal::CarStateSP::CruiseSession>::set(_builder.getPointerField(
+inline void CarStateSP::Builder::setZoompilot( ::cereal::CarStateZP::Reader value) {
+  ::capnp::_::PointerHelpers< ::cereal::CarStateZP>::set(_builder.getPointerField(
       ::capnp::bounded<0>() * ::capnp::POINTERS), value);
 }
-inline  ::cereal::CarStateSP::CruiseSession::Builder CarStateSP::Builder::initCruiseSession() {
-  return ::capnp::_::PointerHelpers< ::cereal::CarStateSP::CruiseSession>::init(_builder.getPointerField(
+inline  ::cereal::CarStateZP::Builder CarStateSP::Builder::initZoompilot() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarStateZP>::init(_builder.getPointerField(
       ::capnp::bounded<0>() * ::capnp::POINTERS));
 }
-inline void CarStateSP::Builder::adoptCruiseSession(
-    ::capnp::Orphan< ::cereal::CarStateSP::CruiseSession>&& value) {
-  ::capnp::_::PointerHelpers< ::cereal::CarStateSP::CruiseSession>::adopt(_builder.getPointerField(
+inline void CarStateSP::Builder::adoptZoompilot(
+    ::capnp::Orphan< ::cereal::CarStateZP>&& value) {
+  ::capnp::_::PointerHelpers< ::cereal::CarStateZP>::adopt(_builder.getPointerField(
       ::capnp::bounded<0>() * ::capnp::POINTERS), kj::mv(value));
 }
-inline ::capnp::Orphan< ::cereal::CarStateSP::CruiseSession> CarStateSP::Builder::disownCruiseSession() {
-  return ::capnp::_::PointerHelpers< ::cereal::CarStateSP::CruiseSession>::disown(_builder.getPointerField(
+inline ::capnp::Orphan< ::cereal::CarStateZP> CarStateSP::Builder::disownZoompilot() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarStateZP>::disown(_builder.getPointerField(
       ::capnp::bounded<0>() * ::capnp::POINTERS));
-}
-
-inline  ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState CarStateSP::CruiseSession::Reader::getState() const {
-  return _reader.getDataField< ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState>(
-      ::capnp::bounded<0>() * ::capnp::ELEMENTS);
-}
-
-inline  ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState CarStateSP::CruiseSession::Builder::getState() {
-  return _builder.getDataField< ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState>(
-      ::capnp::bounded<0>() * ::capnp::ELEMENTS);
-}
-inline void CarStateSP::CruiseSession::Builder::setState( ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState value) {
-  _builder.setDataField< ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState>(
-      ::capnp::bounded<0>() * ::capnp::ELEMENTS, value);
-}
-
-inline float CarStateSP::CruiseSession::Reader::getVCap() const {
-  return _reader.getDataField<float>(
-      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
-}
-
-inline float CarStateSP::CruiseSession::Builder::getVCap() {
-  return _builder.getDataField<float>(
-      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
-}
-inline void CarStateSP::CruiseSession::Builder::setVCap(float value) {
-  _builder.setDataField<float>(
-      ::capnp::bounded<1>() * ::capnp::ELEMENTS, value);
-}
-
-inline  ::cereal::CarStateSP::CruiseSession::CruiseIntent CarStateSP::CruiseSession::Reader::getLastIntent() const {
-  return _reader.getDataField< ::cereal::CarStateSP::CruiseSession::CruiseIntent>(
-      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
-}
-
-inline  ::cereal::CarStateSP::CruiseSession::CruiseIntent CarStateSP::CruiseSession::Builder::getLastIntent() {
-  return _builder.getDataField< ::cereal::CarStateSP::CruiseSession::CruiseIntent>(
-      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
-}
-inline void CarStateSP::CruiseSession::Builder::setLastIntent( ::cereal::CarStateSP::CruiseSession::CruiseIntent value) {
-  _builder.setDataField< ::cereal::CarStateSP::CruiseSession::CruiseIntent>(
-      ::capnp::bounded<1>() * ::capnp::ELEMENTS, value);
-}
-
-inline  ::uint32_t CarStateSP::CruiseSession::Reader::getAnnounceCounter() const {
-  return _reader.getDataField< ::uint32_t>(
-      ::capnp::bounded<2>() * ::capnp::ELEMENTS);
-}
-
-inline  ::uint32_t CarStateSP::CruiseSession::Builder::getAnnounceCounter() {
-  return _builder.getDataField< ::uint32_t>(
-      ::capnp::bounded<2>() * ::capnp::ELEMENTS);
-}
-inline void CarStateSP::CruiseSession::Builder::setAnnounceCounter( ::uint32_t value) {
-  _builder.setDataField< ::uint32_t>(
-      ::capnp::bounded<2>() * ::capnp::ELEMENTS, value);
 }
 
 inline bool LiveMapDataSP::Reader::getSpeedLimitValid() const {
@@ -9177,6 +9723,372 @@ inline bool ModelDataV2SP::Builder::getRightLaneChangeEdgeBlock() {
 inline void ModelDataV2SP::Builder::setRightLaneChangeEdgeBlock(bool value) {
   _builder.setDataField<bool>(
       ::capnp::bounded<17>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::int32_t CustomReserved19::Reader::getVersion() const {
+  return _reader.getDataField< ::int32_t>(
+      ::capnp::bounded<0>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int32_t CustomReserved19::Builder::getVersion() {
+  return _builder.getDataField< ::int32_t>(
+      ::capnp::bounded<0>() * ::capnp::ELEMENTS);
+}
+inline void CustomReserved19::Builder::setVersion( ::int32_t value) {
+  _builder.setDataField< ::int32_t>(
+      ::capnp::bounded<0>() * ::capnp::ELEMENTS, value);
+}
+
+inline bool CustomReserved19::Reader::hasSpeedBinCenters() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS).isNull();
+}
+inline bool CustomReserved19::Builder::hasSpeedBinCenters() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS).isNull();
+}
+inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader CustomReserved19::Reader::getSpeedBinCenters() const {
+  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::get(_reader.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS));
+}
+inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder CustomReserved19::Builder::getSpeedBinCenters() {
+  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::get(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS));
+}
+inline void CustomReserved19::Builder::setSpeedBinCenters( ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS), value);
+}
+inline void CustomReserved19::Builder::setSpeedBinCenters(::kj::ArrayPtr<const float> value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS), value);
+}
+inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder CustomReserved19::Builder::initSpeedBinCenters(unsigned int size) {
+  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::init(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS), size);
+}
+inline void CustomReserved19::Builder::adoptSpeedBinCenters(
+    ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>&& value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::adopt(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>> CustomReserved19::Builder::disownSpeedBinCenters() {
+  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS));
+}
+
+inline bool CustomReserved19::Reader::hasSpeedBinLatAccelFactors() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<1>() * ::capnp::POINTERS).isNull();
+}
+inline bool CustomReserved19::Builder::hasSpeedBinLatAccelFactors() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<1>() * ::capnp::POINTERS).isNull();
+}
+inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader CustomReserved19::Reader::getSpeedBinLatAccelFactors() const {
+  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::get(_reader.getPointerField(
+      ::capnp::bounded<1>() * ::capnp::POINTERS));
+}
+inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder CustomReserved19::Builder::getSpeedBinLatAccelFactors() {
+  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::get(_builder.getPointerField(
+      ::capnp::bounded<1>() * ::capnp::POINTERS));
+}
+inline void CustomReserved19::Builder::setSpeedBinLatAccelFactors( ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<1>() * ::capnp::POINTERS), value);
+}
+inline void CustomReserved19::Builder::setSpeedBinLatAccelFactors(::kj::ArrayPtr<const float> value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<1>() * ::capnp::POINTERS), value);
+}
+inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder CustomReserved19::Builder::initSpeedBinLatAccelFactors(unsigned int size) {
+  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::init(_builder.getPointerField(
+      ::capnp::bounded<1>() * ::capnp::POINTERS), size);
+}
+inline void CustomReserved19::Builder::adoptSpeedBinLatAccelFactors(
+    ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>&& value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::adopt(_builder.getPointerField(
+      ::capnp::bounded<1>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>> CustomReserved19::Builder::disownSpeedBinLatAccelFactors() {
+  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
+      ::capnp::bounded<1>() * ::capnp::POINTERS));
+}
+
+inline bool CustomReserved19::Reader::hasSpeedBinFrictions() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<2>() * ::capnp::POINTERS).isNull();
+}
+inline bool CustomReserved19::Builder::hasSpeedBinFrictions() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<2>() * ::capnp::POINTERS).isNull();
+}
+inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader CustomReserved19::Reader::getSpeedBinFrictions() const {
+  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::get(_reader.getPointerField(
+      ::capnp::bounded<2>() * ::capnp::POINTERS));
+}
+inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder CustomReserved19::Builder::getSpeedBinFrictions() {
+  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::get(_builder.getPointerField(
+      ::capnp::bounded<2>() * ::capnp::POINTERS));
+}
+inline void CustomReserved19::Builder::setSpeedBinFrictions( ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<2>() * ::capnp::POINTERS), value);
+}
+inline void CustomReserved19::Builder::setSpeedBinFrictions(::kj::ArrayPtr<const float> value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<2>() * ::capnp::POINTERS), value);
+}
+inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder CustomReserved19::Builder::initSpeedBinFrictions(unsigned int size) {
+  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::init(_builder.getPointerField(
+      ::capnp::bounded<2>() * ::capnp::POINTERS), size);
+}
+inline void CustomReserved19::Builder::adoptSpeedBinFrictions(
+    ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>&& value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::adopt(_builder.getPointerField(
+      ::capnp::bounded<2>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>> CustomReserved19::Builder::disownSpeedBinFrictions() {
+  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
+      ::capnp::bounded<2>() * ::capnp::POINTERS));
+}
+
+inline bool CustomReserved19::Reader::hasSpeedBinValid() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<3>() * ::capnp::POINTERS).isNull();
+}
+inline bool CustomReserved19::Builder::hasSpeedBinValid() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<3>() * ::capnp::POINTERS).isNull();
+}
+inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Reader CustomReserved19::Reader::getSpeedBinValid() const {
+  return ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::get(_reader.getPointerField(
+      ::capnp::bounded<3>() * ::capnp::POINTERS));
+}
+inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Builder CustomReserved19::Builder::getSpeedBinValid() {
+  return ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::get(_builder.getPointerField(
+      ::capnp::bounded<3>() * ::capnp::POINTERS));
+}
+inline void CustomReserved19::Builder::setSpeedBinValid( ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Reader value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<3>() * ::capnp::POINTERS), value);
+}
+inline void CustomReserved19::Builder::setSpeedBinValid(::kj::ArrayPtr<const bool> value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<3>() * ::capnp::POINTERS), value);
+}
+inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Builder CustomReserved19::Builder::initSpeedBinValid(unsigned int size) {
+  return ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::init(_builder.getPointerField(
+      ::capnp::bounded<3>() * ::capnp::POINTERS), size);
+}
+inline void CustomReserved19::Builder::adoptSpeedBinValid(
+    ::capnp::Orphan< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>&& value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::adopt(_builder.getPointerField(
+      ::capnp::bounded<3>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>> CustomReserved19::Builder::disownSpeedBinValid() {
+  return ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
+      ::capnp::bounded<3>() * ::capnp::POINTERS));
+}
+
+inline bool CustomReserved19::Reader::hasSpeedBinPoints() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS).isNull();
+}
+inline bool CustomReserved19::Builder::hasSpeedBinPoints() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS).isNull();
+}
+inline  ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Reader CustomReserved19::Reader::getSpeedBinPoints() const {
+  return ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::get(_reader.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS));
+}
+inline  ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Builder CustomReserved19::Builder::getSpeedBinPoints() {
+  return ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::get(_builder.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS));
+}
+inline void CustomReserved19::Builder::setSpeedBinPoints( ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Reader value) {
+  ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::set(_builder.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS), value);
+}
+inline void CustomReserved19::Builder::setSpeedBinPoints(::kj::ArrayPtr<const  ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>::Reader> value) {
+  ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::set(_builder.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS), value);
+}
+inline  ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Builder CustomReserved19::Builder::initSpeedBinPoints(unsigned int size) {
+  return ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::init(_builder.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS), size);
+}
+inline void CustomReserved19::Builder::adoptSpeedBinPoints(
+    ::capnp::Orphan< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>&& value) {
+  ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::adopt(_builder.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>> CustomReserved19::Builder::disownSpeedBinPoints() {
+  return ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::disown(_builder.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS));
+}
+
+inline  ::int32_t CustomReserved19::Reader::getSeedVersion() const {
+  return _reader.getDataField< ::int32_t>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int32_t CustomReserved19::Builder::getSeedVersion() {
+  return _builder.getDataField< ::int32_t>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
+}
+inline void CustomReserved19::Builder::setSeedVersion( ::int32_t value) {
+  _builder.setDataField< ::int32_t>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS, value);
+}
+
+inline bool CarStateZP::Reader::hasCruiseSession() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS).isNull();
+}
+inline bool CarStateZP::Builder::hasCruiseSession() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS).isNull();
+}
+inline  ::cereal::CarStateZP::CruiseSession::Reader CarStateZP::Reader::getCruiseSession() const {
+  return ::capnp::_::PointerHelpers< ::cereal::CarStateZP::CruiseSession>::get(_reader.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS));
+}
+inline  ::cereal::CarStateZP::CruiseSession::Builder CarStateZP::Builder::getCruiseSession() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarStateZP::CruiseSession>::get(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS));
+}
+#if !CAPNP_LITE
+inline  ::cereal::CarStateZP::CruiseSession::Pipeline CarStateZP::Pipeline::getCruiseSession() {
+  return  ::cereal::CarStateZP::CruiseSession::Pipeline(_typeless.getPointerField(0));
+}
+#endif  // !CAPNP_LITE
+inline void CarStateZP::Builder::setCruiseSession( ::cereal::CarStateZP::CruiseSession::Reader value) {
+  ::capnp::_::PointerHelpers< ::cereal::CarStateZP::CruiseSession>::set(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS), value);
+}
+inline  ::cereal::CarStateZP::CruiseSession::Builder CarStateZP::Builder::initCruiseSession() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarStateZP::CruiseSession>::init(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS));
+}
+inline void CarStateZP::Builder::adoptCruiseSession(
+    ::capnp::Orphan< ::cereal::CarStateZP::CruiseSession>&& value) {
+  ::capnp::_::PointerHelpers< ::cereal::CarStateZP::CruiseSession>::adopt(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::cereal::CarStateZP::CruiseSession> CarStateZP::Builder::disownCruiseSession() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarStateZP::CruiseSession>::disown(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS));
+}
+
+inline  ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState CarStateZP::CruiseSession::Reader::getState() const {
+  return _reader.getDataField< ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState>(
+      ::capnp::bounded<0>() * ::capnp::ELEMENTS);
+}
+
+inline  ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState CarStateZP::CruiseSession::Builder::getState() {
+  return _builder.getDataField< ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState>(
+      ::capnp::bounded<0>() * ::capnp::ELEMENTS);
+}
+inline void CarStateZP::CruiseSession::Builder::setState( ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState value) {
+  _builder.setDataField< ::cereal::LongitudinalPlanSP::SpeedLimit::AssistState>(
+      ::capnp::bounded<0>() * ::capnp::ELEMENTS, value);
+}
+
+inline float CarStateZP::CruiseSession::Reader::getVCap() const {
+  return _reader.getDataField<float>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
+}
+
+inline float CarStateZP::CruiseSession::Builder::getVCap() {
+  return _builder.getDataField<float>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
+}
+inline void CarStateZP::CruiseSession::Builder::setVCap(float value) {
+  _builder.setDataField<float>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::cereal::CarStateZP::CruiseSession::CruiseIntent CarStateZP::CruiseSession::Reader::getLastIntent() const {
+  return _reader.getDataField< ::cereal::CarStateZP::CruiseSession::CruiseIntent>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
+}
+
+inline  ::cereal::CarStateZP::CruiseSession::CruiseIntent CarStateZP::CruiseSession::Builder::getLastIntent() {
+  return _builder.getDataField< ::cereal::CarStateZP::CruiseSession::CruiseIntent>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
+}
+inline void CarStateZP::CruiseSession::Builder::setLastIntent( ::cereal::CarStateZP::CruiseSession::CruiseIntent value) {
+  _builder.setDataField< ::cereal::CarStateZP::CruiseSession::CruiseIntent>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::uint32_t CarStateZP::CruiseSession::Reader::getAnnounceCounter() const {
+  return _reader.getDataField< ::uint32_t>(
+      ::capnp::bounded<2>() * ::capnp::ELEMENTS);
+}
+
+inline  ::uint32_t CarStateZP::CruiseSession::Builder::getAnnounceCounter() {
+  return _builder.getDataField< ::uint32_t>(
+      ::capnp::bounded<2>() * ::capnp::ELEMENTS);
+}
+inline void CarStateZP::CruiseSession::Builder::setAnnounceCounter( ::uint32_t value) {
+  _builder.setDataField< ::uint32_t>(
+      ::capnp::bounded<2>() * ::capnp::ELEMENTS, value);
+}
+
+inline bool CarControlZP::Reader::hasLaneChangeSmoothing() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS).isNull();
+}
+inline bool CarControlZP::Builder::hasLaneChangeSmoothing() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS).isNull();
+}
+inline  ::cereal::CarControlZP::LaneChangeSmoothing::Reader CarControlZP::Reader::getLaneChangeSmoothing() const {
+  return ::capnp::_::PointerHelpers< ::cereal::CarControlZP::LaneChangeSmoothing>::get(_reader.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS));
+}
+inline  ::cereal::CarControlZP::LaneChangeSmoothing::Builder CarControlZP::Builder::getLaneChangeSmoothing() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarControlZP::LaneChangeSmoothing>::get(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS));
+}
+#if !CAPNP_LITE
+inline  ::cereal::CarControlZP::LaneChangeSmoothing::Pipeline CarControlZP::Pipeline::getLaneChangeSmoothing() {
+  return  ::cereal::CarControlZP::LaneChangeSmoothing::Pipeline(_typeless.getPointerField(0));
+}
+#endif  // !CAPNP_LITE
+inline void CarControlZP::Builder::setLaneChangeSmoothing( ::cereal::CarControlZP::LaneChangeSmoothing::Reader value) {
+  ::capnp::_::PointerHelpers< ::cereal::CarControlZP::LaneChangeSmoothing>::set(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS), value);
+}
+inline  ::cereal::CarControlZP::LaneChangeSmoothing::Builder CarControlZP::Builder::initLaneChangeSmoothing() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarControlZP::LaneChangeSmoothing>::init(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS));
+}
+inline void CarControlZP::Builder::adoptLaneChangeSmoothing(
+    ::capnp::Orphan< ::cereal::CarControlZP::LaneChangeSmoothing>&& value) {
+  ::capnp::_::PointerHelpers< ::cereal::CarControlZP::LaneChangeSmoothing>::adopt(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::cereal::CarControlZP::LaneChangeSmoothing> CarControlZP::Builder::disownLaneChangeSmoothing() {
+  return ::capnp::_::PointerHelpers< ::cereal::CarControlZP::LaneChangeSmoothing>::disown(_builder.getPointerField(
+      ::capnp::bounded<0>() * ::capnp::POINTERS));
+}
+
+inline float CarControlZP::LaneChangeSmoothing::Reader::getJerkFactor() const {
+  return _reader.getDataField<float>(
+      ::capnp::bounded<0>() * ::capnp::ELEMENTS);
+}
+
+inline float CarControlZP::LaneChangeSmoothing::Builder::getJerkFactor() {
+  return _builder.getDataField<float>(
+      ::capnp::bounded<0>() * ::capnp::ELEMENTS);
+}
+inline void CarControlZP::LaneChangeSmoothing::Builder::setJerkFactor(float value) {
+  _builder.setDataField<float>(
+      ::capnp::bounded<0>() * ::capnp::ELEMENTS, value);
 }
 
 }  // namespace

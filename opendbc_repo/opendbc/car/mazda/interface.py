@@ -5,7 +5,7 @@ from opendbc.car.interfaces import CarInterfaceBase
 from opendbc.car.mazda.carcontroller import CarController
 from opendbc.car.mazda.carstate import CarState
 from opendbc.car.mazda.radar_interface import RadarInterface
-from opendbc.car.mazda.values import CAR, DBC, Ecu, LKAS_LIMITS, STEER_TO_ZERO_EPS_FW, MazdaFlags, MazdaSafetyFlags
+from opendbc.car.mazda.values import CAR, DBC, LKAS_LIMITS, STEER_TO_ZERO_EPS_FW, MazdaFlags, MazdaSafetyFlags
 
 
 class CarInterface(CarInterfaceBase):
@@ -20,43 +20,33 @@ class CarInterface(CarInterfaceBase):
 
     ret.radarUnavailable = Bus.radar not in DBC[candidate]
 
-    # PRIVATE BRANCH: the owner's 2021 CX-5 has a confirmed 2022 EPS swap.
-    # This configuration is explicit, not inferred from ECU query success.
-    # This branch must not be used on a CX-5 with its original pre-2022 EPS.
-    personal_cx5_eps_swap = candidate == CAR.MAZDA_CX5
-    if personal_cx5_eps_swap:
-      ret.flags |= MazdaFlags.EPS_SWAP_CX5.value
-
-    # Other Mazda EPS swaps keep their existing firmware-derived steering behavior.
-    steer_to_zero = personal_cx5_eps_swap or candidate == CAR.MAZDA_CX5_2022 or \
-      any(fw.ecu == Ecu.eps and fw.fwVersion in STEER_TO_ZERO_EPS_FW for fw in car_fw)
-    if not steer_to_zero:
+    # Detect the steer-to-zero EPS from firmware so donor-EPS swaps retain its capabilities.
+    steer_to_zero = candidate == CAR.MAZDA_CX5_2022 or \
+      any(fw.ecu == 'eps' and fw.fwVersion in STEER_TO_ZERO_EPS_FW for fw in car_fw)
+    if steer_to_zero:
+      # Select panda's matching torque envelope from the detected EPS.
+      ret.flags |= MazdaFlags.STEER_TO_ZERO_EPS.value
+      ret.safetyConfigs[0].safetyParam |= MazdaSafetyFlags.STEER_TO_ZERO_EPS.value
+    else:
       ret.minSteerSpeed = LKAS_LIMITS.DISABLE_SPEED * CV.KPH_TO_MS
 
-    # CX-9 2021 verified against route 00000004--97e4328f4f: same message set at the same
-    # rates, CRZ_INFO checksum holds on all 54k stock frames, radar UDS at 0x764, and the
-    # same FSC camera firmware (GSH7-67XK2-U) as the CX-5 2022 this was developed on.
-    ret.alphaLongitudinalAvailable = personal_cx5_eps_swap or candidate in (CAR.MAZDA_CX5_2022, CAR.MAZDA_CX9_2021)
+    # Offer alpha longitudinal only with the EPS that retains lateral control through a stop.
+    ret.alphaLongitudinalAvailable = steer_to_zero and not ret.radarUnavailable
     ret.openpilotLongitudinalControl = alpha_long and ret.alphaLongitudinalAvailable
     if ret.openpilotLongitudinalControl:
       ret.safetyConfigs[0].safetyParam |= MazdaSafetyFlags.LONG.value
-      # engagement stays with the car: the driver SETs on the wheel, the body ECU raises
-      # PEDALS.ACC_ACTIVE, and the dash-owned CRZ_EVENTS setpoint survives the radar teardown
+      # The car owns engagement and preserves its setpoint through radar teardown.
       ret.pcmCruise = True
       ret.radarUnavailable = True
-      ret.stopAccel = -1.024  # stock MRCC holds raw -1024 at a stop; the plan parks here and we send it as-is
+      ret.stopAccel = -1.024  # stock MRCC standstill command
       ret.longitudinalActuatorDelay = 0.36  # measured ~0.3 s dead time + ~0.3 s first-order lag
 
-    # Older Mazdas are dashcam only for one reason: their EPS locks steering out after ~5 s of
-    # hands-off and below 45 kph. That is a property of the EPS, not of the car, so a car with
-    # the 2022+ EPS swapped in is controllable and lifts with it. The personal CX-5 keeps
-    # its actual chassis identity; it no longer relies on the VIN fallback promoting it.
+    # Older EPS firmware enforces hands-off and low-speed steering lockouts.
     ret.dashcamOnly = candidate not in (CAR.MAZDA_CX5_2022, CAR.MAZDA_CX9_2021) and not steer_to_zero
 
     ret.enableBsm = 0x477 in fingerprint[0]
 
-    # command-to-torque lag is EPS firmware, so it follows the EPS. lagd learns the rest
-    # (0.338 total on a CX-5 2022; initial = this + 0.2)
+    # Command-to-torque lag follows EPS firmware; lagd learns the remaining delay.
     ret.steerActuatorDelay = 0.14 if steer_to_zero else 0.1
     ret.steerLimitTimer = 0.8
 

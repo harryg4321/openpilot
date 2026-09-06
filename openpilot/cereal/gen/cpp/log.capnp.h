@@ -1513,7 +1513,7 @@ struct DrivingModelData {
   struct MetaData;
 
   struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(e8f9ba819993a776, 2, 4)
+    CAPNP_DECLARE_STRUCT_HEADER(e8f9ba819993a776, 3, 4)
     #if !CAPNP_LITE
     static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
     #endif  // !CAPNP_LITE
@@ -2843,7 +2843,7 @@ struct LateralTorqueParameters {
   class Pipeline;
 
   struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(e61690eb0b091692, 6, 6)
+    CAPNP_DECLARE_STRUCT_HEADER(e61690eb0b091692, 6, 1)
     #if !CAPNP_LITE
     static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
     #endif  // !CAPNP_LITE
@@ -7300,6 +7300,8 @@ public:
 
   inline  ::int16_t getSupplyCurrent() const;
 
+  inline bool getSupplyFault() const;
+
 private:
   ::capnp::_::StructReader _reader;
   template <typename, ::capnp::Kind>
@@ -7357,6 +7359,9 @@ public:
 
   inline  ::int16_t getSupplyCurrent();
   inline void setSupplyCurrent( ::int16_t value);
+
+  inline bool getSupplyFault();
+  inline void setSupplyFault(bool value);
 
 private:
   ::capnp::_::StructBuilder _builder;
@@ -9594,6 +9599,8 @@ public:
 
   inline float getModelExecutionTime() const;
 
+  inline bool getBig() const;
+
 private:
   ::capnp::_::StructReader _reader;
   template <typename, ::capnp::Kind>
@@ -9661,6 +9668,9 @@ public:
 
   inline float getModelExecutionTime();
   inline void setModelExecutionTime(float value);
+
+  inline bool getBig();
+  inline void setBig(bool value);
 
 private:
   ::capnp::_::StructBuilder _builder;
@@ -20463,21 +20473,6 @@ public:
 
   inline  ::int8_t getCalPerc() const;
 
-  inline bool hasSpeedBinCenters() const;
-  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader getSpeedBinCenters() const;
-
-  inline bool hasSpeedBinLatAccelFactors() const;
-  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader getSpeedBinLatAccelFactors() const;
-
-  inline bool hasSpeedBinFrictions() const;
-  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader getSpeedBinFrictions() const;
-
-  inline bool hasSpeedBinValid() const;
-  inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Reader getSpeedBinValid() const;
-
-  inline bool hasSpeedBinPoints() const;
-  inline  ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Reader getSpeedBinPoints() const;
-
 private:
   ::capnp::_::StructReader _reader;
   template <typename, ::capnp::Kind>
@@ -20552,46 +20547,6 @@ public:
 
   inline  ::int8_t getCalPerc();
   inline void setCalPerc( ::int8_t value);
-
-  inline bool hasSpeedBinCenters();
-  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder getSpeedBinCenters();
-  inline void setSpeedBinCenters( ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader value);
-  inline void setSpeedBinCenters(::kj::ArrayPtr<const float> value);
-  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder initSpeedBinCenters(unsigned int size);
-  inline void adoptSpeedBinCenters(::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>&& value);
-  inline ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>> disownSpeedBinCenters();
-
-  inline bool hasSpeedBinLatAccelFactors();
-  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder getSpeedBinLatAccelFactors();
-  inline void setSpeedBinLatAccelFactors( ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader value);
-  inline void setSpeedBinLatAccelFactors(::kj::ArrayPtr<const float> value);
-  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder initSpeedBinLatAccelFactors(unsigned int size);
-  inline void adoptSpeedBinLatAccelFactors(::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>&& value);
-  inline ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>> disownSpeedBinLatAccelFactors();
-
-  inline bool hasSpeedBinFrictions();
-  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder getSpeedBinFrictions();
-  inline void setSpeedBinFrictions( ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader value);
-  inline void setSpeedBinFrictions(::kj::ArrayPtr<const float> value);
-  inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder initSpeedBinFrictions(unsigned int size);
-  inline void adoptSpeedBinFrictions(::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>&& value);
-  inline ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>> disownSpeedBinFrictions();
-
-  inline bool hasSpeedBinValid();
-  inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Builder getSpeedBinValid();
-  inline void setSpeedBinValid( ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Reader value);
-  inline void setSpeedBinValid(::kj::ArrayPtr<const bool> value);
-  inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Builder initSpeedBinValid(unsigned int size);
-  inline void adoptSpeedBinValid(::capnp::Orphan< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>&& value);
-  inline ::capnp::Orphan< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>> disownSpeedBinValid();
-
-  inline bool hasSpeedBinPoints();
-  inline  ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Builder getSpeedBinPoints();
-  inline void setSpeedBinPoints( ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Reader value);
-  inline void setSpeedBinPoints(::kj::ArrayPtr<const  ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>::Reader> value);
-  inline  ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Builder initSpeedBinPoints(unsigned int size);
-  inline void adoptSpeedBinPoints(::capnp::Orphan< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>&& value);
-  inline ::capnp::Orphan< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>> disownSpeedBinPoints();
 
 private:
   ::capnp::_::StructBuilder _builder;
@@ -30468,6 +30423,20 @@ inline void ChestnutState::Builder::setSupplyCurrent( ::int16_t value) {
       ::capnp::bounded<12>() * ::capnp::ELEMENTS, value);
 }
 
+inline bool ChestnutState::Reader::getSupplyFault() const {
+  return _reader.getDataField<bool>(
+      ::capnp::bounded<208>() * ::capnp::ELEMENTS);
+}
+
+inline bool ChestnutState::Builder::getSupplyFault() {
+  return _builder.getDataField<bool>(
+      ::capnp::bounded<208>() * ::capnp::ELEMENTS);
+}
+inline void ChestnutState::Builder::setSupplyFault(bool value) {
+  _builder.setDataField<bool>(
+      ::capnp::bounded<208>() * ::capnp::ELEMENTS, value);
+}
+
 inline typename RadarState::Deprecated::Reader RadarState::Reader::getDeprecated() const {
   return typename RadarState::Deprecated::Reader(_reader);
 }
@@ -33937,6 +33906,20 @@ inline float DrivingModelData::Builder::getModelExecutionTime() {
 inline void DrivingModelData::Builder::setModelExecutionTime(float value) {
   _builder.setDataField<float>(
       ::capnp::bounded<3>() * ::capnp::ELEMENTS, value);
+}
+
+inline bool DrivingModelData::Reader::getBig() const {
+  return _reader.getDataField<bool>(
+      ::capnp::bounded<128>() * ::capnp::ELEMENTS);
+}
+
+inline bool DrivingModelData::Builder::getBig() {
+  return _builder.getDataField<bool>(
+      ::capnp::bounded<128>() * ::capnp::ELEMENTS);
+}
+inline void DrivingModelData::Builder::setBig(bool value) {
+  _builder.setDataField<bool>(
+      ::capnp::bounded<128>() * ::capnp::ELEMENTS, value);
 }
 
 inline bool DrivingModelData::PolyPath::Reader::hasXCoefficients() const {
@@ -49568,196 +49551,6 @@ inline  ::int8_t LateralTorqueParameters::Builder::getCalPerc() {
 inline void LateralTorqueParameters::Builder::setCalPerc( ::int8_t value) {
   _builder.setDataField< ::int8_t>(
       ::capnp::bounded<1>() * ::capnp::ELEMENTS, value);
-}
-
-inline bool LateralTorqueParameters::Reader::hasSpeedBinCenters() const {
-  return !_reader.getPointerField(
-      ::capnp::bounded<1>() * ::capnp::POINTERS).isNull();
-}
-inline bool LateralTorqueParameters::Builder::hasSpeedBinCenters() {
-  return !_builder.getPointerField(
-      ::capnp::bounded<1>() * ::capnp::POINTERS).isNull();
-}
-inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader LateralTorqueParameters::Reader::getSpeedBinCenters() const {
-  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::get(_reader.getPointerField(
-      ::capnp::bounded<1>() * ::capnp::POINTERS));
-}
-inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder LateralTorqueParameters::Builder::getSpeedBinCenters() {
-  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::get(_builder.getPointerField(
-      ::capnp::bounded<1>() * ::capnp::POINTERS));
-}
-inline void LateralTorqueParameters::Builder::setSpeedBinCenters( ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader value) {
-  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
-      ::capnp::bounded<1>() * ::capnp::POINTERS), value);
-}
-inline void LateralTorqueParameters::Builder::setSpeedBinCenters(::kj::ArrayPtr<const float> value) {
-  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
-      ::capnp::bounded<1>() * ::capnp::POINTERS), value);
-}
-inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder LateralTorqueParameters::Builder::initSpeedBinCenters(unsigned int size) {
-  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::init(_builder.getPointerField(
-      ::capnp::bounded<1>() * ::capnp::POINTERS), size);
-}
-inline void LateralTorqueParameters::Builder::adoptSpeedBinCenters(
-    ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>&& value) {
-  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::adopt(_builder.getPointerField(
-      ::capnp::bounded<1>() * ::capnp::POINTERS), kj::mv(value));
-}
-inline ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>> LateralTorqueParameters::Builder::disownSpeedBinCenters() {
-  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
-      ::capnp::bounded<1>() * ::capnp::POINTERS));
-}
-
-inline bool LateralTorqueParameters::Reader::hasSpeedBinLatAccelFactors() const {
-  return !_reader.getPointerField(
-      ::capnp::bounded<2>() * ::capnp::POINTERS).isNull();
-}
-inline bool LateralTorqueParameters::Builder::hasSpeedBinLatAccelFactors() {
-  return !_builder.getPointerField(
-      ::capnp::bounded<2>() * ::capnp::POINTERS).isNull();
-}
-inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader LateralTorqueParameters::Reader::getSpeedBinLatAccelFactors() const {
-  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::get(_reader.getPointerField(
-      ::capnp::bounded<2>() * ::capnp::POINTERS));
-}
-inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder LateralTorqueParameters::Builder::getSpeedBinLatAccelFactors() {
-  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::get(_builder.getPointerField(
-      ::capnp::bounded<2>() * ::capnp::POINTERS));
-}
-inline void LateralTorqueParameters::Builder::setSpeedBinLatAccelFactors( ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader value) {
-  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
-      ::capnp::bounded<2>() * ::capnp::POINTERS), value);
-}
-inline void LateralTorqueParameters::Builder::setSpeedBinLatAccelFactors(::kj::ArrayPtr<const float> value) {
-  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
-      ::capnp::bounded<2>() * ::capnp::POINTERS), value);
-}
-inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder LateralTorqueParameters::Builder::initSpeedBinLatAccelFactors(unsigned int size) {
-  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::init(_builder.getPointerField(
-      ::capnp::bounded<2>() * ::capnp::POINTERS), size);
-}
-inline void LateralTorqueParameters::Builder::adoptSpeedBinLatAccelFactors(
-    ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>&& value) {
-  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::adopt(_builder.getPointerField(
-      ::capnp::bounded<2>() * ::capnp::POINTERS), kj::mv(value));
-}
-inline ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>> LateralTorqueParameters::Builder::disownSpeedBinLatAccelFactors() {
-  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
-      ::capnp::bounded<2>() * ::capnp::POINTERS));
-}
-
-inline bool LateralTorqueParameters::Reader::hasSpeedBinFrictions() const {
-  return !_reader.getPointerField(
-      ::capnp::bounded<3>() * ::capnp::POINTERS).isNull();
-}
-inline bool LateralTorqueParameters::Builder::hasSpeedBinFrictions() {
-  return !_builder.getPointerField(
-      ::capnp::bounded<3>() * ::capnp::POINTERS).isNull();
-}
-inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader LateralTorqueParameters::Reader::getSpeedBinFrictions() const {
-  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::get(_reader.getPointerField(
-      ::capnp::bounded<3>() * ::capnp::POINTERS));
-}
-inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder LateralTorqueParameters::Builder::getSpeedBinFrictions() {
-  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::get(_builder.getPointerField(
-      ::capnp::bounded<3>() * ::capnp::POINTERS));
-}
-inline void LateralTorqueParameters::Builder::setSpeedBinFrictions( ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Reader value) {
-  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
-      ::capnp::bounded<3>() * ::capnp::POINTERS), value);
-}
-inline void LateralTorqueParameters::Builder::setSpeedBinFrictions(::kj::ArrayPtr<const float> value) {
-  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
-      ::capnp::bounded<3>() * ::capnp::POINTERS), value);
-}
-inline  ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>::Builder LateralTorqueParameters::Builder::initSpeedBinFrictions(unsigned int size) {
-  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::init(_builder.getPointerField(
-      ::capnp::bounded<3>() * ::capnp::POINTERS), size);
-}
-inline void LateralTorqueParameters::Builder::adoptSpeedBinFrictions(
-    ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>&& value) {
-  ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::adopt(_builder.getPointerField(
-      ::capnp::bounded<3>() * ::capnp::POINTERS), kj::mv(value));
-}
-inline ::capnp::Orphan< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>> LateralTorqueParameters::Builder::disownSpeedBinFrictions() {
-  return ::capnp::_::PointerHelpers< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
-      ::capnp::bounded<3>() * ::capnp::POINTERS));
-}
-
-inline bool LateralTorqueParameters::Reader::hasSpeedBinValid() const {
-  return !_reader.getPointerField(
-      ::capnp::bounded<4>() * ::capnp::POINTERS).isNull();
-}
-inline bool LateralTorqueParameters::Builder::hasSpeedBinValid() {
-  return !_builder.getPointerField(
-      ::capnp::bounded<4>() * ::capnp::POINTERS).isNull();
-}
-inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Reader LateralTorqueParameters::Reader::getSpeedBinValid() const {
-  return ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::get(_reader.getPointerField(
-      ::capnp::bounded<4>() * ::capnp::POINTERS));
-}
-inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Builder LateralTorqueParameters::Builder::getSpeedBinValid() {
-  return ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::get(_builder.getPointerField(
-      ::capnp::bounded<4>() * ::capnp::POINTERS));
-}
-inline void LateralTorqueParameters::Builder::setSpeedBinValid( ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Reader value) {
-  ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
-      ::capnp::bounded<4>() * ::capnp::POINTERS), value);
-}
-inline void LateralTorqueParameters::Builder::setSpeedBinValid(::kj::ArrayPtr<const bool> value) {
-  ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
-      ::capnp::bounded<4>() * ::capnp::POINTERS), value);
-}
-inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Builder LateralTorqueParameters::Builder::initSpeedBinValid(unsigned int size) {
-  return ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::init(_builder.getPointerField(
-      ::capnp::bounded<4>() * ::capnp::POINTERS), size);
-}
-inline void LateralTorqueParameters::Builder::adoptSpeedBinValid(
-    ::capnp::Orphan< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>&& value) {
-  ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::adopt(_builder.getPointerField(
-      ::capnp::bounded<4>() * ::capnp::POINTERS), kj::mv(value));
-}
-inline ::capnp::Orphan< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>> LateralTorqueParameters::Builder::disownSpeedBinValid() {
-  return ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
-      ::capnp::bounded<4>() * ::capnp::POINTERS));
-}
-
-inline bool LateralTorqueParameters::Reader::hasSpeedBinPoints() const {
-  return !_reader.getPointerField(
-      ::capnp::bounded<5>() * ::capnp::POINTERS).isNull();
-}
-inline bool LateralTorqueParameters::Builder::hasSpeedBinPoints() {
-  return !_builder.getPointerField(
-      ::capnp::bounded<5>() * ::capnp::POINTERS).isNull();
-}
-inline  ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Reader LateralTorqueParameters::Reader::getSpeedBinPoints() const {
-  return ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::get(_reader.getPointerField(
-      ::capnp::bounded<5>() * ::capnp::POINTERS));
-}
-inline  ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Builder LateralTorqueParameters::Builder::getSpeedBinPoints() {
-  return ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::get(_builder.getPointerField(
-      ::capnp::bounded<5>() * ::capnp::POINTERS));
-}
-inline void LateralTorqueParameters::Builder::setSpeedBinPoints( ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Reader value) {
-  ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::set(_builder.getPointerField(
-      ::capnp::bounded<5>() * ::capnp::POINTERS), value);
-}
-inline void LateralTorqueParameters::Builder::setSpeedBinPoints(::kj::ArrayPtr<const  ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>::Reader> value) {
-  ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::set(_builder.getPointerField(
-      ::capnp::bounded<5>() * ::capnp::POINTERS), value);
-}
-inline  ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>::Builder LateralTorqueParameters::Builder::initSpeedBinPoints(unsigned int size) {
-  return ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::init(_builder.getPointerField(
-      ::capnp::bounded<5>() * ::capnp::POINTERS), size);
-}
-inline void LateralTorqueParameters::Builder::adoptSpeedBinPoints(
-    ::capnp::Orphan< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>&& value) {
-  ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::adopt(_builder.getPointerField(
-      ::capnp::bounded<5>() * ::capnp::POINTERS), kj::mv(value));
-}
-inline ::capnp::Orphan< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>> LateralTorqueParameters::Builder::disownSpeedBinPoints() {
-  return ::capnp::_::PointerHelpers< ::capnp::List< ::capnp::List< ::capnp::List<float,  ::capnp::Kind::PRIMITIVE>,  ::capnp::Kind::LIST>,  ::capnp::Kind::LIST>>::disown(_builder.getPointerField(
-      ::capnp::bounded<5>() * ::capnp::POINTERS));
 }
 
 inline float LateralDelay::Reader::getLateralDelay() const {

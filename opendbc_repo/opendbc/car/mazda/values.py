@@ -17,62 +17,94 @@ Ecu = CarParams.Ecu
 class CarControllerParams:
   STEER_DRIVER_ALLOWANCE = 15     # allowed driver torque before start limiting
   STEER_DRIVER_FACTOR = 1         # from dbc
-  STEER_STEP = 1  # 100 Hz
+  # Keep steering deltas synchronized with this 100 Hz control rate.
+  STEER_STEP = 1
 
   ACCEL_MAX = 2.0   # m/s2
   ACCEL_MIN = -3.5  # m/s2
 
-  # Longitudinal message rates, 100 Hz frames
+  # Longitudinal message periods in 100 Hz control frames.
   LONG_STEP = 2        # CRZ_INFO/CRZ_CTRL at 50 Hz, matching stock
   RADAR_STEP = 10      # radar static + track frames at 10 Hz
   RADAR_UDS_STEP = 50  # radar UDS traffic at 2 Hz: session control or tester present
 
-  # Radar session timing, seconds. The FSC's radar-presence check faulted when the radar
-  # went quiet 1.9 s after the camera's boot settle and passed from 5.8 s
-  # (docs/mazda-alpha-long-setup-teardown.md), hence the 10 s settle requirement.
-  FSC_SETTLE_T = 10.0         # observed-settled time before the teardown may start
-  STOCK_RADAR_ALIVE_T = 0.05  # stock CRZ_INFO runs at 50 Hz; silent this long = torn down
-  STOCK_RADAR_GUARD_T = 1.0   # two-master guard: block engagement until silent this long
+  # Wait for the camera's cold-boot radar check before silencing the radar.
+  FSC_SETTLE_T = 10.0          # observed-settled time before the teardown may start
+  # This alive window detects a normal CRZ_INFO gap but does not establish ownership.
+  STOCK_RADAR_ALIVE_T = 0.05
+  # Complete this ownership guard after panda's matching radar-silence guard.
+  PANDA_RADAR_SILENT_T = 1.0            # mazda.h MAZDA_RADAR_SILENT_FRAMES / 50 Hz PEDALS
+  STOCK_RADAR_GUARD_MARGIN_T = 0.2
+  STOCK_RADAR_GUARD_T = STOCK_RADAR_ALIVE_T + LONG_STEP * DT_CTRL + PANDA_RADAR_SILENT_T + STOCK_RADAR_GUARD_MARGIN_T  # 1.27 s
+  RADAR_SESSION_LIMIT_T = 10.0  # per-attempt UDS budget
+  # CAM_LANEINFO runs near 2 Hz, so its freshness window must exceed one period.
+  CAM_LANEINFO_PERIOD_T = 0.563
+  CAM_LANEINFO_FRESH_T = 1.5
 
-  RESUME_UNLATCH_T = 0.20      # RESUME_UNLATCHING pulse width at the release
+  # Stock body-latched releases use a nine-frame RESUME_UNLATCHING pulse.
+  RESUME_UNLATCH_LATCHED_T = 0.18  # s, 9 wire frames, the latched-family mode
+  # Retry one unanswered body-latched release, then return control to the plan.
+  RESUME_REPULSE_T = 1.0  # s after a latched release, GEAR.BRAKE_HOLD still set
 
-  CANCEL_CONTEXT_T = 0.5       # a wheel CANCEL keeps availability drops landing this long after release
+  CANCEL_CONTEXT_T = 0.5      # retain wheel-cancel context until PEDALS responds
 
-  # A marginal vision lead flickers leadVisible faster than the camera can be shown a track
-  # appearing and vanishing (route 6bb2dc61c4 t+400: 6 toggles in 1.4 s on a 120 m lead), so the
-  # advertised lead only follows a state that has held steady, the way Hyundai debounces its
-  # lead bit for 50 frames
+  # Debounce movement requests before releasing a standstill hold.
+  RELEASE_DEBOUNCE_T = 0.2
+
+  # Debounce lead visibility before advertising a radar track.
   LEAD_DEBOUNCE_T = 0.5
 
-  # Stock relaxes its standstill command the instant the body ECU takes the hold over, not on any
-  # schedule: across 13 stock holds >= 4.5 s the relax and GEAR.BRAKE_HOLD agreed to within
-  # +-0.02 s in all 9 where both were visible, and the latch itself landed anywhere from 0.01 s
-  # to 7.6 s after standstill. The command through the hold is the plan's own, which parks at
-  # CP.stopAccel; this is only the relaxed value we send once the car has the brakes.
+  # Relax the command after the body ECU takes ownership of the brake hold.
   ACCEL_HOLD_LATCHED = -0.001  # m/s2
 
-  # Command slew limits, m/s3, on the plan-following command only. Asymmetric on purpose: the
-  # windup limit is what keeps the command from dumping the brake in one frame (the driver-felt
-  # problem), while a tight winddown limit would delay real braking for no measured benefit.
-  # 4.0 sits above the p99 of the plan's own up-slew on the reporter's route (p99 +3.2, p99.9
-  # +6.3, max +34 m/s3), so it only clips state-transition steps. Toyota uses 4.0 both ways.
+  # Match stock's ACCEL_CMD ceiling during a latched release pulse.
+  ACCEL_RESUME_PULSE_MAX = 0.25  # m/s2, latched releases only
+
+  # Match stock's one-frame relaxation and subsequent release ramp.
+  ACCEL_RELEASE_BAND = -0.26  # m/s2, the one-frame relax target at a never-latched release
+  ACCEL_RELEASE_RAMP = 1.25   # m/s3, stock's release ramp (+25 raw per 50 Hz frame)
+
+  # Permit a bounded breakaway ramp because Mazda longitudinal control has no integrator.
+  ACCEL_BREAKAWAY_MAX = 1.45  # m/s2, ceiling for the still-stopped release ramp
+  ACCEL_BREAKAWAY_T = 3.0  # s
+  ACCEL_BREAKAWAY_OVERSHOOT = 0.75  # m/s2 above the plan the still-stopped ramp may climb
+
+  # Limit upward plan-command slew without delaying braking response.
   ACCEL_WINDUP_LIMIT = 4.0 * DT_CTRL     # m/s2 per frame
   ACCEL_WINDDOWN_LIMIT = -10.0 * DT_CTRL  # m/s2 per frame, clips only the p99.9+ steps
 
   def __init__(self, CP):
-    # Gate the higher-authority steering tune on the CX-5 2022+ EPS, not the car model, so the
-    # CX-9 that shares this EPS and CX-5-EPS swaps keep it. steer_to_zero sets minSteerSpeed == 0
-    # (interface.py / STEER_TO_ZERO_EPS_FW) — the same EPS-present proxy carstate.py gates on.
-    if CP.minSteerSpeed == 0:
-      self.STEER_MAX = 1200        # theoretical max_steer 2047; EPS clips above ceiling per speed
-      # 1200 below 32 mph for full low-speed authority and feedforward overshoot.
-      # 800 above for smoother highway steering with 22% PID headroom above EPS ceiling (620).
+    # Select the 2022 steering limits from EPS firmware, including donor-EPS swaps.
+    if CP.flags & MazdaFlags.STEER_TO_ZERO_EPS:
+      # STEER_MAX scales normalized torque into counts; EPS_CEILING_LOOKUP is the applied limit.
+      self.STEER_MAX = 1200        # theoretical max_steer 2047
       self.STEER_MAX_LOOKUP = ([0., 14.2, 14.5], [1200, 1200, 800])
-      # EPS hardware rate limit: 12 units/frame at all speeds (4-unit quantization, max 3 steps).
+      # Match the EPS hardware slew and panda safety limits in both directions.
       self.STEER_DELTA_UP = 12
-      self.STEER_DELTA_DOWN = 25
-      self.STEER_DRIVER_MULTIPLIER = 15   # weight driver torque (tuned for the CX-5 EPS; upstream stock is 1)
+      self.STEER_DELTA_DOWN = 12
+      self.STEER_DRIVER_MULTIPLIER = 15   # tuned for the CX-5 EPS response
+      # Clamp to the measured applied-torque ceiling so controlsd can detect saturation.
+      self.EPS_CEILING_LOOKUP = ([8.0, 8.5, 9.4, 10.3, 11.2, 12.1, 13.0, 13.9, 14.5],
+                                 [1148, 1132, 1092, 1048, 1012,  920,  808,  676,  620])
+
+      # Stop commanding after sustained zero delivery to avoid a camera steering fault. Use
+      # LKAS_EFFECTIVE because LKAS_BLOCK may still permit partial delivery.
+      self.STEER_UNDELIVERED_MIN = 200      # counts; below this the EPS rounds to zero anyway
+      self.STEER_UNDELIVERED_FRAMES = 20    # 200 ms at 100 Hz
+
+      # Alert only after sustained non-delivery above maneuvering speed. Suppress normal
+      # low-speed standby blocks identified by LKAS_TRACK_STATE.
+      self.STEER_UNDELIVERED_ALERT_FRAMES = 80    # 0.8 s at 100 Hz, on top of the latch's 0.2
+      self.STEER_UNDELIVERED_ALERT_MIN_SPEED = 12. * CV.MPH_TO_MS
+      # A block that began below this speed is the EPS's standby from a stop, whatever
+      # LKAS_TRACK_STATE says later in it; only a block that began rolling can be a dropout.
+      self.STEER_UNDELIVERED_ALERT_ORIGIN_SPEED = 1.0  # m/s
+
+      # Use a sample window and margin to stay inside panda's fresher driver-torque envelope.
+      self.STEER_DRIVER_SAMPLES = 10
+      self.STEER_DRIVER_MARGIN = 2
     else:
+      # Stock limits without the steer-to-zero safety flag.
       self.STEER_MAX = 800         # theoretical max_steer 2047
       self.STEER_DELTA_UP = 10
       self.STEER_DELTA_DOWN = 25
@@ -96,22 +128,25 @@ class MazdaCX5_2022CarSpecs(CarSpecs):
 
 
 class MazdaFlags(IntFlag):
-  # Static flags
-  # Gen 1 hardware: same CAN messages and same camera
+  # GEN1 platforms share CAN messages and camera hardware.
   GEN1 = 1
 
-  # Explicit personal configuration: 2021 CX-5 chassis with the owner's 2022 EPS.
-  EPS_SWAP_CX5 = 2
+  # Identifies steer-to-zero EPS control and safety behavior from firmware.
+  STEER_TO_ZERO_EPS = 2
 
 
 class MazdaSafetyFlags(IntFlag):
   LONG = 1
+  # Selects the steer-to-zero EPS envelope in panda safety.
+  STEER_TO_ZERO_EPS = 2
 
 
 class WMI(StrEnum):
   JAPAN_PASSENGER = "JM1"   # Japan-built passenger cars
   JAPAN_CROSSOVER = "JM3"   # Japan-built crossovers
   MEXICO_PASSENGER = "3MZ"  # Mazda de Mexico (Mazda 3)
+  # Export VINs without a model-year field use the EPS-swap fallback.
+  OCEANIA_EXPORT = "JM0"
 
 
 @dataclass
@@ -132,6 +167,8 @@ class CAR(Platforms):
   MAZDA_CX9 = MazdaPlatformConfig(
     [MazdaCarDocs("Mazda CX-9 2016-20")],
     MazdaCarSpecs(mass=4217 * CV.LB_TO_KG, wheelbase=2.93, steerRatio=17.6),
+    # This radar does not publish 0x361-0x366 tracks on bus 0.
+    dbc_dict={Bus.pt: 'mazda_2017'},
     wmis={WMI.JAPAN_CROSSOVER}, chassis_codes={'TC'}, years={'G', 'H', 'J', 'K', 'L'},  # 2016-20
   )
   MAZDA_3 = MazdaPlatformConfig(
@@ -162,10 +199,7 @@ class LKAS_LIMITS:
   ENABLE_SPEED = 52     # kph
 
 
-# EPS firmware versions with steer-to-zero capability (2022+ CX-5 EPS). Matched against
-# car_fw rather than the fingerprinted platform so the same EPS swapped into another Mazda
-# keeps full-speed steering. Keep in sync with the CAR.MAZDA_CX5_2022 (Ecu.eps, 0x730) block
-# in fingerprints.py.
+# Keep steer-to-zero firmware synchronized with the CX-5 2022 EPS entries in fingerprints.py.
 STEER_TO_ZERO_EPS_FW = {
   b'KBST-3210X-A-00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
   b'KSD5-3210X-C-00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
@@ -181,47 +215,41 @@ class Buttons:
 
 
 def match_fw_to_car_fuzzy(live_fw_versions, vin, offline_fw_versions) -> set[str]:
-  # A donor EPS (steer-to-zero swaps) breaks every exact FW match; the VIN names
-  # the chassis through any ECU swap. Runs only after exact and fuzzy FW fail.
-  # Model line is VIN positions 4-5, model year code is position 10.
-  if is_valid_vin(vin):
-    vin_obj = Vin(vin)
-    chassis_code = vin_obj.vds[0:2]
-    year = vin_obj.vis[0]
-
-    candidates = set()
-    for platform in CAR:
-      platform_config = platform.config
-      if vin_obj.wmi in platform_config.wmis and chassis_code in platform_config.chassis_codes and year in platform_config.years:
-        candidates.add(platform)
-
-    if len(candidates) == 1:
-      carlog.error(f"Fingerprinted {next(iter(candidates))} by VIN")
-      return {str(c) for c in candidates}
-
-    # a known Mazda WMI that names no platform identified an unsupported model
-    # (BP, DM, KE, out-of-range years): never second-guess it with the engine.
-    # WMIs outside the table (e.g. 7MM, CX-50) keep the fallback and its
-    # collision risk; pinned by test.
-    if vin_obj.wmi in {wmi for platform in CAR for wmi in platform.config.wmis}:
-      return set()
-
-  # Oceania VINs encode no model year and never decode; engine firmware is
-  # unique per platform (asserted by test), so it names the chassis instead.
-  # A lone responding address is not a car to name.
-  if len(live_fw_versions) < 2:
+  # After firmware matching fails, require VIN fields to identify one chassis platform.
+  if not is_valid_vin(vin):
     return set()
 
-  engine_fw = live_fw_versions.get((0x7e0, None), set())
+  vin_obj = Vin(vin)
+  chassis_code = vin_obj.vds[0:2]
+  year = vin_obj.vis[0]
+
   candidates = set()
-  for platform, ecus in offline_fw_versions.items():
-    if engine_fw & set(ecus.get((Ecu.engine, 0x7e0, None), [])):
+  for platform in CAR:
+    platform_config = platform.config
+    if vin_obj.wmi in platform_config.wmis and chassis_code in platform_config.chassis_codes and year in platform_config.years:
       candidates.add(platform)
 
   if len(candidates) == 1:
-    carlog.error(f"Fingerprinted {next(iter(candidates))} by engine firmware")
-  return {str(c) for c in candidates}
+    carlog.error(f"Fingerprinted {next(iter(candidates))} by VIN")
+    return {str(c) for c in candidates}
 
+  # Only export VINs without model-year data continue to the EPS-swap fallback.
+  if vin_obj.wmi != WMI.OCEANIA_EXPORT:
+    return set()
+
+  # Export-car swaps require a recognized EPS and an engine that identifies one platform.
+  eps_fw = live_fw_versions.get((0x730, None), set())
+  if not eps_fw & STEER_TO_ZERO_EPS_FW:
+    return set()
+
+  engine_fw = live_fw_versions.get((0x7e0, None), set())
+  candidates = {platform for platform, ecus in offline_fw_versions.items()
+                if engine_fw & set(ecus.get((Ecu.engine, 0x7e0, None), []))}
+  if len(candidates) != 1:
+    return set()
+
+  carlog.error(f"Fingerprinted {next(iter(candidates))} by engine firmware behind a steer-to-zero EPS swap")
+  return {str(c) for c in candidates}
 
 FW_QUERY_CONFIG = FwQueryConfig(
   fw_version_regex=br"[A-Z0-9-]{11,16}\x00{8,13}",

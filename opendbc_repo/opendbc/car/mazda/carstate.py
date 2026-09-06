@@ -1,16 +1,18 @@
 from opendbc.can import CANDefine, CANParser
-from opendbc.car import Bus, DT_CTRL, create_button_events, structs
+from opendbc.car import Bus, DT_CTRL, create_button_events, structs, uds
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.interfaces import CarStateBase
-from opendbc.car.mazda.values import DBC, LKAS_LIMITS, CarControllerParams
+from opendbc.sunnypilot.car.mazda.values import MazdaFlagsSP
+from opendbc.car.mazda.values import DBC, LKAS_LIMITS, CarControllerParams, MazdaFlags
 from opendbc.sunnypilot.car.mazda.carstate_ext import CarStateExt
 
 ButtonType = structs.CarState.ButtonEvent.Type
 
 FSC_SETTLE_FRAMES = int(CarControllerParams.FSC_SETTLE_T / DT_CTRL)
 STOCK_RADAR_ALIVE_FRAMES = int(CarControllerParams.STOCK_RADAR_ALIVE_T / DT_CTRL)
-STOCK_RADAR_GUARD_FRAMES = int(CarControllerParams.STOCK_RADAR_GUARD_T / DT_CTRL)
+STOCK_RADAR_GUARD_FRAMES = round(CarControllerParams.STOCK_RADAR_GUARD_T / DT_CTRL)
 CANCEL_CONTEXT_FRAMES = int(CarControllerParams.CANCEL_CONTEXT_T / DT_CTRL)
+CAM_LANEINFO_FRESH_FRAMES = int(CarControllerParams.CAM_LANEINFO_FRESH_T / DT_CTRL)
 
 
 class CarState(CarStateBase, CarStateExt):
@@ -24,6 +26,14 @@ class CarState(CarStateBase, CarStateExt):
     self.crz_btns_counter = 0
     self.acc_active_last = False
     self.lkas_allowed_speed = False
+    self.lkas_blocked = False
+    self.lkas_effective = 0
+    # LKAS non-delivery state is used only with the steer-to-zero EPS.
+    self.params = CarControllerParams(CP)
+    self.steer_undelivered_frames = 0
+    self.steer_undelivered = False
+    self.steer_undelivered_alert = False
+    self.lkas_block_origin_speed: float | None = None
 
     self.distance_button = 0
     self.accel_button = 0
@@ -31,16 +41,21 @@ class CarState(CarStateBase, CarStateExt):
     self.cancel_button = 0
     self.resume_button = 0
     self.main_button = 0
+    self.tja_button = 0
 
     self.cruise_available = False
     self.cruise_enabled = False
+    self.cruise_enabled_blocked = True
     self.brake_pressed_prev = False
     self.stock_radar_silent_frames = 0
     self.radar_was_silenced = False
     self.cancel_context_frames = 0
     self.cam_laneinfo_seen = False
+    self.cam_laneinfo_silent_frames = 0
+    self.cam_empty_seen = False
+    self.radar_session_refused = False
     self.fsc_settled_frames = 0
-    # the body ECU has taken the standstill hold over and is holding the brakes itself
+    # The body ECU owns the standstill brake hold.
     self.brake_hold = False
 
   @property
@@ -50,6 +65,42 @@ class CarState(CarStateBase, CarStateExt):
   @property
   def stock_radar_alive(self) -> bool:
     return self.stock_radar_silent_frames < STOCK_RADAR_ALIVE_FRAMES
+
+  @property
+  def stock_radar_gone(self) -> bool:
+    # This silence duration establishes radar ownership rather than a dropped frame.
+    return self.stock_radar_silent_frames >= STOCK_RADAR_GUARD_FRAMES
+
+  def update_steer_undelivered(self, v_ego_raw: float, lkas_request: float, lkas_blocked: bool, lkas_track_state: bool) -> None:
+    # Latch sustained zero LKAS_EFFECTIVE for a real request before the camera faults. Clear
+    # with LKAS_BLOCK because a zeroed command provides no delivery signal. Driver torque does
+    # not gate entry because torque in the requested direction does not reduce the request.
+    if not lkas_blocked:
+      self.steer_undelivered_frames = 0
+      self.steer_undelivered = False
+      self.steer_undelivered_alert = False
+      self.lkas_block_origin_speed = None
+    elif self.lkas_block_origin_speed is None:
+      self.lkas_block_origin_speed = v_ego_raw
+
+    if lkas_blocked and not self.steer_undelivered:
+      if self.lkas_effective == 0 and abs(lkas_request) > self.params.STEER_UNDELIVERED_MIN:
+        self.steer_undelivered_frames += 1
+        self.steer_undelivered = self.steer_undelivered_frames >= self.params.STEER_UNDELIVERED_FRAMES
+      else:
+        self.steer_undelivered_frames = 0
+
+    if self.steer_undelivered:
+      # Alert only for a sustained road-speed block that began rolling. LKAS_TRACK_STATE
+      # identifies normal low-speed standby, which can remain set briefly during a brisk
+      # launch; the origin speed catches the standby blocks it does not, the ones carried
+      # from a stop through a slow crawl until TRACK_STATE clears with the block still on.
+      self.steer_undelivered_frames += 1
+      if (not self.steer_undelivered_alert and not lkas_track_state and
+          self.steer_undelivered_frames >= self.params.STEER_UNDELIVERED_FRAMES + self.params.STEER_UNDELIVERED_ALERT_FRAMES and
+          v_ego_raw >= self.params.STEER_UNDELIVERED_ALERT_MIN_SPEED and
+          self.lkas_block_origin_speed >= self.params.STEER_UNDELIVERED_ALERT_ORIGIN_SPEED):
+        self.steer_undelivered_alert = True
 
   def update(self, can_parsers) -> tuple[structs.CarState, structs.CarStateSP]:
     cp = can_parsers[Bus.pt]
@@ -65,7 +116,7 @@ class CarState(CarStateBase, CarStateExt):
       cp.vl["WHEEL_SPEEDS"]["RR"],
     )
 
-    # Match panda speed reading
+    # Match panda's ENGINE_DATA source for the standstill decision.
     speed_kph = cp.vl["ENGINE_DATA"]["SPEED"]
     ret.standstill = speed_kph <= .1
 
@@ -98,7 +149,14 @@ class CarState(CarStateBase, CarStateExt):
     # Either due to low speed or hands off
     lkas_blocked = cp.vl["STEER_RATE"]["LKAS_BLOCK"] == 1
 
-    if self.CP.minSteerSpeed > 0:
+    # LKAS_EFFECTIVE distinguishes partial delivery from a complete block.
+    self.lkas_blocked = lkas_blocked
+    self.lkas_effective = cp.vl["STEER_RATE"]["LKAS_EFFECTIVE"]
+    if self.CP.flags & MazdaFlags.STEER_TO_ZERO_EPS:
+      self.update_steer_undelivered(ret.vEgoRaw, cp.vl["STEER_RATE"]["LKAS_REQUEST"], lkas_blocked,
+                                    cp.vl["STEER_RATE"]["LKAS_TRACK_STATE"] == 1)
+
+    if not self.CP.flags & MazdaFlags.STEER_TO_ZERO_EPS:
       # LKAS is enabled at 52kph going up and disabled at 45kph going down
       # wait for LKAS_BLOCK signal to clear when going up since it lags behind the speed sometimes
       if speed_kph > LKAS_LIMITS.ENABLE_SPEED and not lkas_blocked:
@@ -108,21 +166,29 @@ class CarState(CarStateBase, CarStateExt):
     else:
       self.lkas_allowed_speed = True
 
+    # Require fresh CAM_LANEINFO because missing and stale parser values can appear settled.
+    if len(cp_cam.vl_all["CAM_LANEINFO"]["LANE_LINES"]) > 0:
+      self.cam_laneinfo_seen = True
+      self.cam_laneinfo_silent_frames = 0
+    else:
+      self.cam_laneinfo_silent_frames += 1
+    cam_laneinfo_fresh = self.cam_laneinfo_seen and self.cam_laneinfo_silent_frames < CAM_LANEINFO_FRESH_FRAMES
+
+    # 0x21d leaves its idle 0x7f status only while the collision warning is displayed.
+    if not self.cam_empty_seen:
+      self.cam_empty_seen = len(cp_cam.vl_all["CAM_EMPTY"]["STATUS"]) > 0
+    cam_empty = cp_cam.vl["CAM_EMPTY"]
+    ped = cp_cam.vl["CAM_PEDESTRIAN"]
+    ret.stockFcw = (self.cam_empty_seen and cam_empty["STATUS"] != 0x7F) or \
+                   ped["PED_WARNING"] == 1 or ped["BRAKE_WARNING"] == 1
+
     if self.CP.openpilotLongitudinalControl:
-      # The radar teardown silences the radar-owned CRZ_CTRL frame, so cruise state comes
-      # from PEDALS: ACC_OFF means MRCC is armed but idle, ACC_ACTIVE means it is engaged.
-      # Brake-only samples can arrive with both bits low mid-press; mirror the panda rx
-      # guard and hold the previous state through them, else MADS sees a false
-      # availability drop and force-disengages lateral.
+      # After radar teardown, derive cruise state from PEDALS. Hold the previous state through
+      # brake-only samples where both cruise bits are transiently low.
       acc_armed = cp.vl["PEDALS"]["ACC_OFF"] == 1
       acc_active = cp.vl["PEDALS"]["ACC_ACTIVE"] == 1
       brake_free = not ret.brakePressed and not self.brake_pressed_prev
-      # The brake hold below exists for brake-only PEDALS samples that arrive with both bits
-      # low mid-press. A wheel CANCEL is different: it turns the MRCC main state off for real,
-      # and it has to land even with the brake down -- holding through it kept lateral engaged
-      # against a cancel mashed under braking until the brake was released 4 s later (route
-      # 7f9e3ff336 t+484-488). The PEDALS reaction runs a few frames behind the button, so
-      # cancel context outlives the press by a moment.
+      # Retain wheel-cancel context until PEDALS reflects the main-state change.
       if cp.vl["CRZ_BTNS"]["CAN_OFF"] == 1:
         self.cancel_context_frames = CANCEL_CONTEXT_FRAMES
       elif self.cancel_context_frames > 0:
@@ -134,58 +200,50 @@ class CarState(CarStateBase, CarStateExt):
       if acc_armed or acc_active or self.cruise_enabled or brake_free:
         self.cruise_enabled = acc_active
 
-      # Two-master guard: while the stock radar still broadcasts CRZ_INFO, our synthetic
-      # frames would fight it on the bus, so engagement stays blocked until it has been
-      # silent for 1 second. The block wears two different hats:
-      #  - Before the first teardown of the drive this is the expected boot phase (FSC
-      #    settle + UDS handover, ~10-15 s), not a fault. Holding availability low keeps
-      #    engagement out with at most a wrongCarMode no-entry toast; raising accFaulted
-      #    here showed a permanent "Cruise Fault: Restart the Car" on every start for a
-      #    condition that clears by itself.
-      #  - After the radar has been silenced once, hearing it again is a genuine
-      #    two-master conflict (dropped tester present, S3 recovery, or the ordered
-      #    hand-back) and is a real accFaulted. The alpha-long toggle monitor relies on
-      #    exactly this edge as its "stock radar heard" acknowledgement.
-      if len(cp.vl_all["CRZ_INFO"]["CTR1"]) > 0:
+      # Block engagement until stock radar ownership is clear. Radar traffic after a completed
+      # teardown is a fault and triggers the alpha-long recovery path.
+      if len(cp.vl_all["CRZ_INFO"]["CTR"]) > 0:
         self.stock_radar_silent_frames = 0
       else:
         self.stock_radar_silent_frames += 1
-      silenced = self.stock_radar_silent_frames >= STOCK_RADAR_GUARD_FRAMES
+
+      # Accept positive session responses and NRC 0x78, which means response pending.
+      resp = cp.vl_all["RADAR_UDS_RESPONSE"]
+      self.radar_session_refused = any(
+        sid == 0x7F and sub == uds.SERVICE_TYPE.DIAGNOSTIC_SESSION_CONTROL and nrc != 0x78
+        for sid, sub, nrc in zip(resp["SID"], resp["SUB"], resp["NRC"], strict=True))
+      silenced = self.stock_radar_gone
       ret.accFaulted = self.radar_was_silenced and not silenced
       self.radar_was_silenced |= silenced
 
-      ret.cruiseState.available = self.cruise_available and self.radar_was_silenced
-      ret.cruiseState.enabled = self.cruise_enabled
+      # Gate enabled with available so a stock engagement inside the ownership guard cannot
+      # latch MADS. Require an idle transition before adopting a later engagement.
+      if not self.radar_was_silenced:
+        self.cruise_enabled_blocked = True
+      elif not self.cruise_enabled:
+        self.cruise_enabled_blocked = False
 
-      # FSC settle timer (the radar teardown gate): the camera broadcasts a boot-in-progress
-      # state on CAM_LANEINFO (NO_ERR_BIT, a pure boot marker clearing at 2.8-6.0 s and never
-      # set again while driving), then runs a radar-presence check in the following seconds.
-      # A latched fault (ERR_BIT) also shows the boot marker clear, so it must hold the timer
-      # at zero. The seen latch matters: before the first frame the parser reads all-zero,
-      # which would count as settled.
-      #
-      # BIT2 used to gate this too. It is byte-identical to NO_ERR_BIT on every frame of the
-      # 40 alpha-long routes this was developed against, so it carried no information there,
-      # but another CX-5 2022 with identical camera firmware (GSH7-67XK2-U) cold-booted with
-      # BIT2 latched high and NO_ERR_BIT clear for a whole ignition cycle. That pinned the
-      # timer at zero, so the radar was never silenced and the two-master guard held
-      # accFaulted for the entire drive with nothing to tell the driver why.
-      self.cam_laneinfo_seen |= len(cp_cam.vl_all["CAM_LANEINFO"]["LANE_LINES"]) > 0
+      ret.cruiseState.available = self.cruise_available and self.radar_was_silenced
+      ret.cruiseState.enabled = self.cruise_enabled and not self.cruise_enabled_blocked
+
+      # The FSC teardown gate requires fresh, settled CAM_LANEINFO without ERR_BIT. BIT2 is
+      # excluded because it may remain set for an entire ignition cycle.
       laneinfo = cp_cam.vl["CAM_LANEINFO"]
-      settled = self.cam_laneinfo_seen and not any(laneinfo[s] for s in ("NO_ERR_BIT", "ERR_BIT"))
+      settled = cam_laneinfo_fresh and not (laneinfo["NO_ERR_BIT"] or laneinfo["ERR_BIT"])
       self.fsc_settled_frames = self.fsc_settled_frames + 1 if settled else 0
     else:
-      # TODO: the signal used for available seems to be the adaptive cruise signal, instead of the main on
-      #       it should be used for carState.cruiseState.nonAdaptive instead
+      # CRZ_AVAILABLE represents adaptive-cruise availability, not the main switch.
       ret.cruiseState.available = cp.vl["CRZ_CTRL"]["CRZ_AVAILABLE"] == 1
       ret.cruiseState.enabled = cp.vl["CRZ_CTRL"]["CRZ_ACTIVE"] == 1
     self.brake_pressed_prev = ret.brakePressed
-    ret.cruiseState.standstill = cp.vl["PEDALS"]["STANDSTILL"] == 1
+    # PEDALS.STANDSTILL means wheels stopped, not ACC hold. Reporting it under openpilot
+    # longitudinal would prevent LongControl from leaving its stopping state.
+    ret.cruiseState.standstill = cp.vl["PEDALS"]["STANDSTILL"] == 1 and not self.CP.openpilotLongitudinalControl
     ret.cruiseState.speed = cp.vl["CRZ_EVENTS"]["CRZ_SPEED"] * CV.KPH_TO_MS
 
-    # stock lkas should be on
+    # Stock LKAS must be active.
     # TODO: is this needed?
-    ret.invalidLkasSetting = cp_cam.vl["CAM_LANEINFO"]["LANE_LINES"] == 0
+    ret.invalidLkasSetting = cam_laneinfo_fresh and cp_cam.vl["CAM_LANEINFO"]["LANE_LINES"] == 0
 
     if ret.cruiseState.enabled:
       if not self.lkas_allowed_speed and self.acc_active_last:
@@ -197,12 +255,11 @@ class CarState(CarStateBase, CarStateExt):
     # Check if LKAS is disabled due to lack of driver torque when all other states indicate
     # it should be enabled (steer lockout). Don't warn until we actually get lkas active
     # and lose it again, i.e, after initial lkas activation
-    if self.CP.minSteerSpeed > 0:
+    if not self.CP.flags & MazdaFlags.STEER_TO_ZERO_EPS:
       ret.steerFaultTemporary = self.lkas_allowed_speed and lkas_blocked
     else:
-      # CX-5 2022: EPS accepts steering at all speeds regardless of LKAS_BLOCK.
-      # Verified across 5.5M frames: LKAS_BLOCK never indicates a real steering failure.
-      ret.steerFaultTemporary = False
+      # Report only sustained road-speed zero delivery after the command has been suppressed.
+      ret.steerFaultTemporary = self.steer_undelivered_alert
 
     self.acc_active_last = ret.cruiseState.enabled
 
@@ -213,24 +270,24 @@ class CarState(CarStateBase, CarStateExt):
     self.cam_laneinfo = cp_cam.vl["CAM_LANEINFO"]
     ret.steerFaultPermanent = cp_cam.vl["CAM_LKAS"]["ERR_BIT_1"] == 1
 
-    # cruise control button events: distance, inc, dec, resume, cancel, and main
+    # Decode distance, set-speed, resume, cancel, and main-button events.
     prev_distance_button = self.distance_button
     prev_accel_button = self.accel_button
     prev_decel_button = self.decel_button
     prev_cancel_button = self.cancel_button
     prev_resume_button = self.resume_button
     prev_main_button = self.main_button
+    prev_tja_button = self.tja_button
     self.distance_button = cp.vl["CRZ_BTNS"]["DISTANCE_LESS"]
-    # On CX-5 2022 the wheel "+" button toggles SET_P (not RES); RES is the resume button.
-    # Verified against route 0000019c--84a5408a38 seg2/3: holding "+" emits SET_P=1, body ECU increments CRZ_SPEED.
+    # SET_P is the wheel's increase button; RES is a distinct resume button.
     self.accel_button = cp.vl["CRZ_BTNS"]["SET_P"]
     self.decel_button = cp.vl["CRZ_BTNS"]["SET_M"]
-    # CAN_OFF carries the cancel intent. Without an event here, ICBM's readiness gate never
-    # learns the driver is canceling, so it keeps spamming CRZ_BTNS with cancel=0 and the
-    # body ECU treats the latest non-cancel frame as authoritative. Critical for cancel-safety.
+    # Publish CAN_OFF so ICBM does not transmit over a physical cancel press.
     self.cancel_button = cp.vl["CRZ_BTNS"]["CAN_OFF"]
     self.resume_button = cp.vl["CRZ_BTNS"]["RES"]
     self.main_button = int(cp.vl["CRZ_BTNS"]["MODE_X"] == 1 and cp.vl["CRZ_BTNS"]["MODE_Y"] == 1)
+    # Only a car declared to have the physical TJA button reports it as the MADS switch.
+    self.tja_button = int(cp.vl["CRZ_BTNS"]["TJA_BUTTON"] == 1) if self.CP_SP.flags & MazdaFlagsSP.TJA_BUTTON else 0
 
     ret.buttonEvents = [
       *create_button_events(self.distance_button, prev_distance_button, {1: ButtonType.gapAdjustCruise}),
@@ -239,6 +296,7 @@ class CarState(CarStateBase, CarStateExt):
       *create_button_events(self.cancel_button, prev_cancel_button, {1: ButtonType.cancel}),
       *create_button_events(self.resume_button, prev_resume_button, {1: ButtonType.resumeCruise}),
       *create_button_events(self.main_button, prev_main_button, {1: ButtonType.mainCruise}),
+      *create_button_events(self.tja_button, prev_tja_button, {1: ButtonType.lkas}),
     ]
 
     CarStateExt.update(self, ret, ret_sp, can_parsers)
@@ -249,13 +307,15 @@ class CarState(CarStateBase, CarStateExt):
   def get_can_parsers(CP, CP_SP):
     pt_messages = []
     if CP.openpilotLongitudinalControl:
-      # no liveness check: the stock frame is expected to disappear after the radar
-      # teardown, and its presence is what the two-master guard watches for
+      # Do not require liveness for frames intentionally absent after radar teardown.
       pt_messages.append(("CRZ_INFO", float("nan")))
+      pt_messages.append(("RADAR_UDS_RESPONSE", float("nan")))
     cam_messages = [
-      # read through vl_all, which unlike vl has no lazy registration
-      ("CAM_LANEINFO", 0),
-      ("CAM_TRAFFIC_SIGNS", 0),
+      # Read these optional camera messages without making them part of canValid.
+      ("CAM_LANEINFO", float("nan")),
+      ("CAM_TRAFFIC_SIGNS", float("nan")),
+      ("CAM_EMPTY", float("nan")),
+      ("CAM_PEDESTRIAN", float("nan")),
     ]
     return {
       Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], pt_messages, 0),

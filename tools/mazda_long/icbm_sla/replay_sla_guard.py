@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Regression replay: the seg16 confirm bug (F1) against the cruise arbiter.
+"""
+Copyright (c) 2026-, Zeph Leggett.
+
+This file is part of zoompilot and is licensed under the MIT License.
+See the LICENSE.md file in the root directory for more details.
+
+Regression replay: the seg16 confirm bug (F1) against the cruise arbiter.
 
 Replays the recorded carState/longitudinalPlanSP stream from the route where +/-
 confirmation self-destructed (952c07dea500f4e2/0000004f--fea08aad07/16, 65 mph zone,
@@ -21,7 +27,7 @@ from openpilot.cereal import custom
 from replay_common import arbiter_frames, make_arbiter
 
 SessionState = custom.LongitudinalPlanSP.SpeedLimit.AssistState
-CruiseIntent = custom.CarStateSP.CruiseSession.CruiseIntent
+CruiseIntent = custom.CarStateZP.CruiseSession.CruiseIntent
 DEFAULT_LOG = Path.home() / "Desktop" / "952c07dea500f4e2_0000004f--fea08aad07--16--rlog.zst"
 
 

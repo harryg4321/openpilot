@@ -182,6 +182,17 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.NO_ENTRY: NoEntryAlert("Controls Mismatch: Lateral"),
   },
 
+  # The panda is rejecting our steering while MADS thinks it is steering: the wheel is
+  # unsteered from the first rejected frame, not from the disable 2 s later (Mazda routes
+  # 00000116/117: 2 s of rejected 0x243 with the camera relay-blocked latched the EPS fault)
+  EventNameSP.controlsMismatchLateralWarning: {
+    ET.WARNING: Alert(
+      "Take Control",
+      "Steering Blocked by Panda Safety",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.prompt, .5),
+  },
+
   EventNameSP.experimentalModeSwitched: {
     ET.WARNING: NormalPermanentAlert("Experimental Mode Switched", duration=1.5)
   },
@@ -245,5 +256,13 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.userPrompt, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 0.1),
+  },
+
+  EventNameSP.bigModelReady: {
+    ET.PERMANENT: Alert(
+      "Big Model Ready",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 2.),
   },
 }
