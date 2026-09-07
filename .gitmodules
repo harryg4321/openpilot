@@ -1,4 +1,4 @@
-# Use the personal no-warning opendbc fork. Changes to this file make submodule sync refresh
+# Use the zoompilot opendbc fork. Changes to this file make submodule sync refresh
 # legacy URLs.
 [submodule "panda"]
   path = panda
